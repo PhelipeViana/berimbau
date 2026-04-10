@@ -124,22 +124,23 @@ $stats = obterEstatisticas();
     </div>
     
     <nav class="menu-list">
-        <a href="?page=dashboard" class="menu-item <?= $page == 'dashboard' ? 'active' : '' ?>">
-            <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+    <a href="?page=dashboard" class="menu-item <?= $page == 'dashboard' ? 'active' : '' ?>">
+        <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+    </a>
+    
+    <a href="?page=lista" class="menu-item <?= $page == 'lista' ? 'active' : '' ?>">
+        <i class="fas fa-users"></i> <span>Alunos</span>
+    </a>
+    <a href="views/diario_view.php" class="menu-item <?= $page == 'diario' ? 'active' : '' ?>">
+        <i class="fas fa-book-open"></i> <span>Diário de Aula</span>
+    </a>
+    
+    <?php if ($_SESSION['nivel'] === 'admin'): ?>
+        <a href="usuarios.php" class="menu-item">
+            <i class="fas fa-user-shield"></i> <span>Operadores</span>
         </a>
-        <div class="menu-label">Gestão</div>
-        <a href="?page=lista" class="menu-item <?= $page == 'lista' ? 'active' : '' ?>">
-            <i class="fas fa-users"></i> <span>Alunos</span>
-        </a>
-        <a href="views/diario_view.php" class="menu-item <?= $page == 'diario' ? 'active' : '' ?>">
-    <i class="fas fa-book-open"></i> <span>Diário de Aula</span>
-</a>
-        <?php if ($_SESSION['nivel'] === 'admin'): ?>
-            <a href="usuarios.php" class="menu-item">
-                <i class="fas fa-user-shield"></i> <span>Operadores</span>
-            </a>
-        <?php endif; ?>
-    </nav>
+    <?php endif; ?>
+</nav>
 
     <div style="padding: 20px; border-top: 1px solid #1e293b;">
         <div class="footer-info" style="margin-bottom: 15px;">

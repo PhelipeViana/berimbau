@@ -51,7 +51,7 @@ try {
     $pdo->commit();
 
     // Redireciona com sucesso
-    header("Location: index.php?msg=diario_salvo");
+    header("Location: visualizar_aula.php?id=" . $aula_id);
     exit;
 
 } catch (Exception $e) {
