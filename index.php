@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 5. CARREGAMENTO DE DADOS
+// 5. CARREGAMENTO DE DADOS PARA A VIEW
 $alunos = listarAlunos();
 $stats = obterEstatisticas(); 
 ?>
@@ -76,7 +76,7 @@ $stats = obterEstatisticas();
         * { box-sizing: border-box; transition: all 0.2s ease; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #1e293b; overflow: hidden; }
 
-        /* SIDEBAR CORRIGIDA */
+        /* SIDEBAR */
         .sidebar { width: var(--sidebar-w); background: var(--secondary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; }
         .sidebar.collapsed { width: var(--sidebar-c); }
         .sidebar-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; min-height: 80px; }
@@ -91,8 +91,9 @@ $stats = obterEstatisticas();
         .menu-item:hover, .menu-item.active { background: rgba(99, 102, 241, 0.1); color: white; }
         .menu-item i { width: 25px; font-size: 18px; margin-right: 10px; }
 
+        /* CONTEÚDO */
         .main { flex: 1; overflow-y: auto; padding: 40px; position: relative; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .top-bar { margin-bottom: 30px; }
         
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; margin-bottom: 40px; }
         .stat-card { background: white; padding: 25px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
@@ -128,12 +129,15 @@ $stats = obterEstatisticas();
         <a href="?page=dashboard" class="menu-item <?= $page == 'dashboard' ? 'active' : '' ?>">
             <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
         </a>
-        <a href="?page=lista" class="menu-item <?= $page == 'lista' ? 'active' : '' ?>">
-            <i class="fas fa-users"></i> <span>Alunos</span>
-        </a>
-        <a href="views/diario_view.php" class="menu-item">
-            <i class="fas fa-book-open"></i> <span>Diário de Aula</span>
-        </a>
+        
+        <?php if ($_SESSION['nivel'] !== 'aluno'): ?>
+            <a href="?page=lista" class="menu-item <?= $page == 'lista' ? 'active' : '' ?>">
+                <i class="fas fa-users"></i> <span>Alunos</span>
+            </a>
+            <a href="views/diario_view.php" class="menu-item">
+                <i class="fas fa-book-open"></i> <span>Diário de Aula</span>
+            </a>
+        <?php endif; ?>
         
         <?php if ($_SESSION['nivel'] === 'admin'): ?>
             <a href="usuarios.php" class="menu-item">
@@ -154,27 +158,48 @@ $stats = obterEstatisticas();
 </aside>
 
 <main class="main">
-    <?php if (isset($_GET['msg']) && $_GET['msg'] == 'diario_salvo'): ?>
-        <div style="background: var(--success); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-            <i class="fas fa-check-circle"></i> Diário registado com sucesso!
-        </div>
-    <?php endif; ?>
-
-    <div class="top-bar">
-        <h1 style="font-size: 24px; margin:0;"><?= ucfirst($page) ?></h1>
-        <div style="color: #64748b; font-size: 14px;"><i class="far fa-calendar"></i> <?= date('d M, Y') ?></div>
-    </div>
-
     <?php if ($page == 'dashboard'): ?>
+        <div class="top-bar">
+            <h1 style="font-size: 24px; margin:0;">Olá, <?= explode(' ', $_SESSION['usuario'])[0] ?>!</h1>
+            <p style="color: #64748b; margin: 5px 0 0 0;">Bem-vindo ao Berimbau.</p>
+        </div>
+
         <div class="grid-stats">
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fas fa-user-graduate"></i></div>
-                <div class="stat-data"><h3><?= $stats['total'] ?></h3><p>Alunos Ativos</p></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #fef2f2; color: #b91c1c;"><i class="fas fa-heartbeat"></i></div>
-                <div class="stat-data"><h3><?= $stats['alertas_saude'] ?></h3><p>Alertas de Saúde</p></div>
-            </div>
+            <?php if ($_SESSION['nivel'] === 'aluno'): 
+                $frequencia = obterFrequenciaAluno($_SESSION['usuario_id']); 
+            ?>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #dcfce7; color: #166534;"><i class="fas fa-check-double"></i></div>
+                    <div class="stat-data"><h3><?= $frequencia['presencas'] ?></h3><p>Presenças</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fef2f2; color: #b91c1c;"><i class="fas fa-user-times"></i></div>
+                    <div class="stat-data"><h3><?= $frequencia['faltas'] ?></h3><p>Faltas</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-data"><h3><?= $frequencia['aproveitamento'] ?>%</h3><p>Aproveitamento</p></div>
+                </div>
+
+            <?php else: ?>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fas fa-user-graduate"></i></div>
+                    <div class="stat-data"><h3><?= $stats['total'] ?></h3><p>Alunos Ativos</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fef2f2; color: #b91c1c;"><i class="fas fa-heartbeat"></i></div>
+                    <div class="stat-data"><h3><?= $stats['alertas_saude'] ?></h3><p>Alertas de Saúde</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fef3c7; color: #92400e;"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-data"><h3><?= $stats['aulas_mes'] ?? 0 ?></h3><p>Aulas no Mês</p></div>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="card-glass">
+            <h4>Avisos da Escola</h4>
+            <p style="font-size: 14px; color: #64748b;">Mantenha seu histórico de saúde sempre atualizado com o instrutor.</p>
         </div>
 
     <?php elseif ($page == 'lista'): ?>
@@ -212,6 +237,23 @@ $stats = obterEstatisticas();
                     <div style="grid-column: span 2;">
                         <label>Nome Completo</label>
                         <input type="text" name="nome" required value="<?= $aluno_edicao['nome'] ?? '' ?>">
+                    </div>
+                    <div>
+                        <label>Docente Responsável</label>
+                        <select name="docente" required>
+                            <option value="">Selecione...</option>
+                            <?php 
+                            $lista_docentes = ["MESTRE BIRO", "MESTRE KOSKORÃO", "PROFESSOR RAFAEL", "OUTRO"];
+                            foreach($lista_docentes as $doc): 
+                                $selected = (isset($aluno_edicao['docente']) && $aluno_edicao['docente'] == $doc) ? 'selected' : '';
+                                echo "<option value='$doc' $selected>$doc</option>";
+                            endforeach; 
+                            ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label>E-mail (Login)</label>
+                        <input type="email" name="email" value="<?= $aluno_edicao['email'] ?? '' ?>">
                     </div>
                 </div>
                 <button type="submit" name="btnSalvar" class="btn-primary">SALVAR REGISTRO</button>

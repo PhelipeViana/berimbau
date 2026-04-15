@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Sistema Capoeira</title>
+    <title>Login - BERIMBAU</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: 'Inter', sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
@@ -34,7 +34,7 @@
 </head>
 <body>
     <div class="login-box">
-        <h2 style="text-align:center; color:#0f172a; margin-bottom: 30px; letter-spacing: -1px;">SISTEMA <span style="color:#6366f1">CAPOEIRA</span></h2>
+        <h2 style="text-align:center; color:#0f172a; margin-bottom: 30px; letter-spacing: -1px;">BERIMBAU<span style="color:#6366f1"></br></br>SISTEMA DE GESTÃO PARA ESCOLAS DE CAPOEIRA</span></h2>
         
         <?php if(isset($erro_login)): ?>
             <p style="color:#ef4444; font-size:13px; text-align:center; background:#fee2e2; padding:10px; border-radius:8px;"><?= $erro_login ?></p>

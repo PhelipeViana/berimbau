@@ -263,3 +263,31 @@ function listarAulasRecentes() {
     }
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+function obterFrequenciaAluno($aluno_id) {
+    global $pdo;
+    
+    // Total de aulas que ocorreram para a turma desse aluno (ou geral)
+    $total_aulas = $pdo->query("SELECT COUNT(*) FROM aulas")->fetchColumn();
+    
+    // Total de presenças do aluno
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM presencas WHERE aluno_id = ?");
+    $stmt->execute([$aluno_id]);
+    $presencas = $stmt->fetchColumn();
+    
+    $faltas = $total_aulas - $presencas;
+    $aproveitamento = ($total_aulas > 0) ? round(($presencas / $total_aulas) * 100) : 0;
+    
+    return [
+        'presencas' => $presencas,
+        'faltas' => $faltas,
+        'aproveitamento' => $aproveitamento
+    ];
+}
+
+function buscarDiarioPorId($id) {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT * FROM aulas WHERE id = ?");
+    $stmt->execute([$id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
