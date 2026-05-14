@@ -42,29 +42,23 @@ $lista_usuarios = listarUsuarios();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Operadores | CapoeiraOS</title>
+    <title>Gestão de Operadores | BERIMBAU - SISTEMA DE GESTÃO PARA ESCOLAS DE CAPOEIRA</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="assets/css/estilo_padrao.css">
+
     <style>
-        :root { 
-            --primary: #6366f1; --secondary: #0f172a; --bg: #f8fafc; 
-            --sidebar-w: 260px; --sidebar-c: 80px; --accent: #8b5cf6;
-            --danger: #ef4444; --success: #10b981; --border: #e2e8f0;
-        }
-        * { box-sizing: border-box; transition: all 0.2s ease; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #1e293b; }
-        .sidebar { width: var(--sidebar-w); background: var(--secondary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; }
-        .sidebar-header { padding: 25px; border-bottom: 1px solid #1e293b; font-weight: 800; }
-        .menu-list { list-style: none; padding: 15px; flex-grow: 1; }
-        .menu-item { text-decoration: none; color: #94a3b8; display: flex; align-items: center; padding: 12px 15px; border-radius: 12px; margin-bottom: 5px; }
-        .menu-item:hover, .menu-item.active { background: rgba(99, 102, 241, 0.1); color: white; }
-        .menu-item i { width: 25px; font-size: 18px; margin-right: 10px; }
+        /* Estilos específicos apenas para a gestão de usuários */
         .main { flex: 1; overflow-y: auto; padding: 40px; }
         .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-        input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; margin-top: 8px; }
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; cursor: pointer; font-weight: 600; }
-        .btn-primary:hover { background: var(--accent); transform: translateY(-1px); }
+        input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; margin-top: 8px; font-family: inherit; }
+        
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        
         .user-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid var(--border); }
         .badge { font-size: 10px; padding: 4px 10px; border-radius: 20px; font-weight: 700; text-transform: uppercase; margin-left: 10px; }
         .badge-admin { background: #fef2f2; color: var(--danger); }
@@ -74,10 +68,17 @@ $lista_usuarios = listarUsuarios();
 <body>
 
 <aside class="sidebar">
-    <div class="sidebar-header">CAPOEIRA<span style="color:var(--primary)">OS</span></div>
+    <div class="sidebar-header">
+        <div class="logo-text">
+            <b>BERIMBAU<span style="color:var(--primary)">.</span></b>
+            <small>GESTÃO PARA ESCOLAS DE CAPOEIRA</small>
+        </div>
+    </div>
     <nav class="menu-list">
         <a href="index.php?page=dashboard" class="menu-item"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></a>
         <a href="index.php?page=lista" class="menu-item"><i class="fas fa-users"></i> <span>Alunos</span></a>
+        <a href="views/diario_view.php" class="menu-item"><i class="fas fa-book-open"></i> <span>Diário de Aula</span></a>
+        <a href="index.php?page=vivencia" class="menu-item"><i class="fas fa-book-reader"></i> <span>Vivência</span></a>
         <a href="usuarios.php" class="menu-item active"><i class="fas fa-user-shield"></i> <span>Operadores</span></a>
     </nav>
 </aside>

@@ -33,6 +33,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 // 4. PROCESSAMENTO DE DADOS (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['btnSalvar'])) {
+        // Se for admin e estiver salvando um aluno pendente, o docente_id será o selecionado ou o próprio admin
         $_POST['usuario_id'] = ($_SESSION['nivel'] === 'admin') ? ($_POST['usuario_id'] ?? $_SESSION['usuario_id']) : $_SESSION['usuario_id'];
         
         $nome_foto = $_POST['foto_atual'] ?? 'padrao.png';
@@ -58,6 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // 5. CARREGAMENTO DE DADOS PARA A VIEW
 $alunos = listarAlunos();
 $stats = obterEstatisticas(); 
+
+// LÓGICA DE SOLICITAÇÕES PENDENTES (Alunos sem docente vinculado)
+$solicitacoes = array_filter($alunos, function($a) {
+    // Um aluno é pendente se o docente_id for nulo, vazio ou 0
+    return empty($a['docente_id']) || $a['docente_id'] == 0; 
+});
 ?>
 
 <!DOCTYPE html>
@@ -69,31 +76,18 @@ $stats = obterEstatisticas();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/estilo_padrao.css">
     <style>
-        /* Estilos específicos para a página de Vivência */
         .card-vivencia {
-            background: white; 
-            padding: 25px; 
-            border-radius: 20px; 
-            border: 1px solid #e2e8f0; 
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            background: white; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; 
+            transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: space-between;
         }
-        .card-vivencia:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-            border-color: var(--primary);
-        }
+        .card-vivencia:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); border-color: var(--primary); }
         .icon-vivencia {
-            background: #f1f5f9; 
-            width: 50px; 
-            height: 50px; 
-            border-radius: 12px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            margin-bottom: 15px;
+            background: #f1f5f9; width: 50px; height: 50px; border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
+        }
+        /* Ajuste para o alerta de pendência */
+        .badge-pendente {
+            background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 5px;
         }
     </style>
 </head>
@@ -103,7 +97,7 @@ $stats = obterEstatisticas();
     <div class="sidebar-header">
         <div class="logo-text">
             <b>BERIMBAU<span style="color:var(--primary)">.</span></b>
-            <small>Gestão de Capoeira</small>
+            <small>GESTÃO PARA ESCOLAS DE CAPOEIRA</small>
         </div>
         <button onclick="toggleSidebar()" class="btn-toggle"><i class="fas fa-bars"></i></button>
     </div>
@@ -114,8 +108,9 @@ $stats = obterEstatisticas();
         </a>
         
         <?php if ($_SESSION['nivel'] !== 'aluno'): ?>
-            <a href="?page=lista" class="menu-item <?= $page == 'lista' ? 'active' : '' ?>">
+            <a href="?page=lista" class="menu-item <?= ($page == 'lista' || (isset($_GET['pendentes']))) ? 'active' : '' ?>">
                 <i class="fas fa-users"></i> <span>Alunos</span>
+                <?php if(count($solicitacoes) > 0) echo '<span class="badge-pendente">'.count($solicitacoes).'</span>'; ?>
             </a>
             <a href="views/diario_view.php" class="menu-item">
                 <i class="fas fa-book-open"></i> <span>Diário de Aula</span>
@@ -138,23 +133,8 @@ $stats = obterEstatisticas();
             <small style="display: block; color: #94a3b8; font-size: 10px; letter-spacing: 1px;">USUÁRIO CONECTADO</small>
             <strong style="color: white; font-size: 13px;"><?= strtoupper($_SESSION['usuario']) ?></strong>
         </div>
-        <a href="logout.php" class="btn-logout" style="
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-            background: rgba(239, 68, 68, 0.1); 
-            color: #ef4444; 
-            padding: 12px; 
-            border-radius: 12px; 
-            text-decoration: none; 
-            font-weight: 700; 
-            font-size: 12px;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        ">
-            <i class="fas fa-sign-out-alt"></i> 
-            <span>SAIR DO SISTEMA</span>
+        <a href="logout.php" class="btn-logout" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 12px; transition: all 0.3s ease; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <i class="fas fa-sign-out-alt"></i> <span>SAIR DO SISTEMA</span>
         </a>
     </div>
 </aside>
@@ -166,12 +146,7 @@ $stats = obterEstatisticas();
             <p>Bem-vindo ao sistema da sua escola.</p>
         </header>
 
-        <?php if ($_SESSION['nivel'] === 'admin'): 
-            $solicitacoes = array_filter($alunos, function($a) {
-                return empty($a['docente']) || $a['docente'] == 'Selecione...'; 
-            });
-            
-            if (count($solicitacoes) > 0): ?>
+        <?php if ($_SESSION['nivel'] === 'admin' && count($solicitacoes) > 0): ?>
             <div class="alerta-solicitacao" style="background: #fff5f5; border-left: 6px solid #ef4444; padding: 20px; border-radius: 16px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);">
                 <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                     <div style="background: #ef4444; color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -179,19 +154,18 @@ $stats = obterEstatisticas();
                     </div>
                     <div>
                         <h3 style="margin:0; color: #991b1b; font-size: 18px;">Cadastros Externos Pendentes</h3>
-                        <p style="margin:0; color: #b91c1c; font-size: 14px;">Existem <strong><?= count($solicitacoes) ?></strong> solicitações aguardando sua autorização.</p>
+                        <p style="margin:0; color: #b91c1c; font-size: 14px;">Existem <strong><?= count($solicitacoes) ?></strong> solicitações aguardando vínculo de docente.</p>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <?php foreach(array_slice($solicitacoes, 0, 4) as $sol): ?>
                         <a href="?edit=<?= $sol['id'] ?>" style="text-decoration:none; background: white; padding: 10px 18px; border-radius: 10px; border: 1px solid #fee2e2; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-user-edit" style="color: #ef4444;"></i> <?= strtoupper($sol['nome']) ?>
+                            <i class="fas fa-user-check" style="color: #ef4444;"></i> <?= strtoupper($sol['nome']) ?>
                         </a>
                     <?php endforeach; ?>
-                    <a href="?page=lista" style="text-decoration:none; background: #ef4444; color: white; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-left: auto;">VER TODAS</a>
+                    <a href="?page=lista&filter=pendentes" style="text-decoration:none; background: #ef4444; color: white; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-left: auto;">VER TODAS</a>
                 </div>
             </div>
-            <?php endif; ?>
         <?php endif; ?>
 
         <div class="stats-grid">
@@ -230,7 +204,9 @@ $stats = obterEstatisticas();
     <?php elseif ($page == 'lista'): ?>
         <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <div>
-                <h1 style="margin:0;">Relação de Alunos</h1>
+                <h1 style="margin:0;">
+                    <?= (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? 'Solicitações de Cadastro' : 'Relação de Alunos' ?>
+                </h1>
                 <p style="margin:0; color: #64748b;">Gerencie os integrantes da sua escola</p>
             </div>
             <a href="?page=cadastro" class="btn-berimbau btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;">
@@ -239,15 +215,25 @@ $stats = obterEstatisticas();
         </header>
 
         <div class="list-container">
-            <?php foreach ($alunos as $a): ?>
-                <div class="aluno-card">
+            <?php 
+            $exibir_alunos = (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? $solicitacoes : $alunos;
+            
+            if(empty($exibir_alunos)): ?>
+                <div style="text-align:center; padding:50px; color:#94a3b8;">Nenhum registro encontrado.</div>
+            <?php endif;
+
+            foreach ($exibir_alunos as $a): ?>
+                <div class="aluno-card" style="<?= (empty($a['docente_id'])) ? 'border-left: 4px solid #ef4444;' : '' ?>">
                     <img src="uploads/<?= $a['foto'] ?? 'padrao.png' ?>" class="avatar-circle">
                     <div class="aluno-info">
                         <strong><?= strtoupper($a['nome']) ?></strong>
                         <span class="grad-tag"><?= $a['graduacao'] ?></span>
+                        <?php if(empty($a['docente_id'])): ?>
+                            <small style="color:#ef4444; font-weight:bold; display:block; margin-top:5px;">AGUARDANDO DOCENTE</small>
+                        <?php endif; ?>
                     </div>
                     <div class="aluno-actions">
-                        <a href="?edit=<?= $a['id'] ?>" class="btn-edit"><i class="fas fa-edit"></i></a>
+                        <a href="?edit=<?= $a['id'] ?>" class="btn-edit" title="Editar / Autorizar"><i class="fas fa-edit"></i></a>
                         <a href="?delete=<?= $a['id'] ?>" class="btn-delete" onclick="return confirm('Excluir aluno?')"><i class="fas fa-trash"></i></a>
                     </div>
                 </div>

@@ -12,20 +12,45 @@ if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] === 'aluno') {
 
 $alunos = listarAlunos();
 $diario_edicao = null;
+$usuario_id_logado = $_SESSION['usuario_id'];
+$nivel_logado = $_SESSION['nivel'];
 
 // Lógica para carregar dados em caso de edição
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $stmt = $pdo->prepare("SELECT * FROM aulas WHERE id = ?");
-    $stmt->execute([$_GET['edit']]);
+    $sql_edit = ($nivel_logado === 'admin') 
+        ? "SELECT * FROM aulas WHERE id = ?" 
+        : "SELECT * FROM aulas WHERE id = ? AND docente_id = ?";
+    
+    $params_edit = ($nivel_logado === 'admin') ? [$_GET['edit']] : [$_GET['edit'], $usuario_id_logado];
+    
+    $stmt = $pdo->prepare($sql_edit);
+    $stmt->execute($params_edit);
     $diario_edicao = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$diario_edicao && isset($_GET['edit'])) {
+        header("Location: diario_view.php?msg=permissao_negada");
+        exit;
+    }
 }
 
-// Função para listar os diários recentes
-$sql_recentes = "SELECT a.*, u.usuario as docente_nome 
-                 FROM aulas a 
-                 LEFT JOIN usuarios u ON a.docente_id = u.id 
-                 ORDER BY a.data_aula DESC LIMIT 10";
-$diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
+// Filtro de Privacidade
+if ($nivel_logado === 'admin') {
+    $sql_recentes = "SELECT a.*, u.usuario as docente_nome 
+                     FROM aulas a 
+                     LEFT JOIN usuarios u ON a.docente_id = u.id 
+                     ORDER BY a.data_aula DESC LIMIT 20";
+    $stmt_recentes = $pdo->query($sql_recentes);
+} else {
+    $sql_recentes = "SELECT a.*, u.usuario as docente_nome 
+                     FROM aulas a 
+                     LEFT JOIN usuarios u ON a.docente_id = u.id 
+                     WHERE a.docente_id = ? 
+                     ORDER BY a.data_aula DESC LIMIT 20";
+    $stmt_recentes = $pdo->prepare($sql_recentes);
+    $stmt_recentes->execute([$usuario_id_logado]);
+}
+
+$diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -35,23 +60,11 @@ $diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diário de Classe | BERIMBAU</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="../assets/css/estilo_padrao.css">
+
     <style>
-        :root { 
-            --primary: #6366f1; --secondary: #0f172a; --bg: #f8fafc; 
-            --border: #e2e8f0; --warning: #f59e0b; --danger: #ef4444;
-        }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        .sidebar { width: 260px; background: var(--secondary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid #1e293b; min-height: 80px; }
-        .logo-text b { font-size: 20px; display: block; }
-        .logo-text small { font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase; }
-
-        .menu-list { list-style: none; padding: 15px; flex-grow: 1; }
-        .menu-item { text-decoration: none; color: #94a3b8; display: flex; align-items: center; padding: 12px 15px; border-radius: 12px; margin-bottom: 5px; font-size: 14px; }
-        .menu-item.active { background: rgba(99, 102, 241, 0.1); color: white; }
-        .menu-item i { width: 25px; margin-right: 10px; }
-
+        /* AQUI SÓ FICA O QUE É EXCLUSIVO DO DIÁRIO */
         .main { flex: 1; overflow-y: auto; padding: 40px; }
         .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
         
@@ -59,36 +72,20 @@ $diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
         th { background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid var(--border); font-size: 12px; color: #64748b; }
         td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
         
-        input[type="text"], input[type="date"], textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; }
+        input[type="text"], input[type="date"], textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; }
         
         .btn-submit { 
-            border: none; 
-            padding: 10px 25px; 
-            border-radius: 8px; 
-            width: auto; 
-            font-size: 14px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            color: white; 
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: all 0.2s;
+            border: none; padding: 10px 25px; border-radius: 8px; 
+            font-size: 14px; font-weight: 600; cursor: pointer; color: white; 
+            display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
         }
+        .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-        .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-
-        .actions-container {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-top: 25px;
-            padding-top: 15px;
-            border-top: 1px solid var(--border);
-        }
-        
+        .actions-container { display: flex; align-items: center; gap: 20px; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border); }
         .history-section { margin-top: 50px; }
+        .badge-docente { font-size: 10px; background: #f1f5f9; padding: 3px 8px; border-radius: 5px; color: #475569; }
+        
+        /* Ajuste de links de ação */
         .btn-edit { color: var(--primary); text-decoration: none; font-weight: bold; font-size: 13px; margin-right: 15px; }
         .btn-delete { color: var(--danger); text-decoration: none; font-weight: bold; font-size: 13px; }
     </style>
@@ -98,14 +95,23 @@ $diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
 <aside class="sidebar">
     <div class="sidebar-header">
         <div class="logo-text">
-            <b>BERIMBAU<span style="color:var(--primary)">.it</span></b>
-            <small>Gestão de Capoeira</small>
+            <b>BERIMBAU<span style="color:var(--primary)"></span></b>
+            <small>GESTÃO PARA ESCOLAS DE CAPOEIRA</small>
         </div>
     </div>
     <nav class="menu-list">
         <a href="../index.php?page=dashboard" class="menu-item"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></a>
-        <a href="../index.php?page=lista" class="menu-item"><i class="fas fa-users"></i> <span>Alunos</span></a>
-        <a href="diario_view.php" class="menu-item active"><i class="fas fa-book-open"></i> <span>Diário de Aula</span></a>
+        
+        <?php if ($nivel_logado !== 'aluno'): ?>
+            <a href="../index.php?page=lista" class="menu-item"><i class="fas fa-users"></i> <span>Alunos</span></a>
+            <a href="diario_view.php" class="menu-item active"><i class="fas fa-book-open"></i> <span>Diário de Aula</span></a>
+        <?php endif; ?>
+
+        <a href="../index.php?page=vivencia" class="menu-item"><i class="fas fa-book-reader"></i> <span>Vivência</span></a>
+
+        <?php if ($nivel_logado === 'admin'): ?>
+            <a href="../usuarios.php" class="menu-item"><i class="fas fa-user-shield"></i> <span>Operadores</span></a>
+        <?php endif; ?>
     </nav>
 </aside>
 
@@ -169,13 +175,14 @@ $diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <div class="history-section">
-        <h3><i class="fas fa-history"></i> Registros Recentes</h3>
+        <h3><i class="fas fa-history"></i> <?= $nivel_logado === 'admin' ? 'Todos os Registros' : 'Meus Registros Recentes' ?></h3>
         <div class="card-glass" style="padding: 10px 20px;">
             <table>
                 <thead>
                     <tr>
                         <th>DATA</th>
                         <th>TEMA</th>
+                        <?php if($nivel_logado === 'admin'): ?><th>MESTRE/DOCENTE</th><?php endif; ?>
                         <th>LOCAL</th>
                         <th>AÇÕES</th>
                     </tr>
@@ -185,13 +192,16 @@ $diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
                     <tr>
                         <td><?= date('d/m/Y', strtotime($row['data_aula'])) ?></td>
                         <td><strong><?= $row['tema_aula'] ?></strong></td>
+                        <?php if($nivel_logado === 'admin'): ?>
+                            <td><span class="badge-docente"><?= strtoupper($row['docente_nome'] ?? 'N/A') ?></span></td>
+                        <?php endif; ?>
                         <td><?= $row['local_treino'] ?></td>
                         <td style="white-space: nowrap;">
                             <a href="diario_view.php?edit=<?= $row['id'] ?>" class="btn-edit">
                                 <i class="fas fa-edit"></i> Editar
                             </a>
                             <a href="../excluir_diario.php?id=<?= $row['id'] ?>" class="btn-delete" 
-                               onclick="return confirm('Tem certeza que deseja excluir permanentemente este diário e todas as presenças registradas nele?')">
+                               onclick="return confirm('Tem certeza?')">
                                 <i class="fas fa-trash-alt"></i> Excluir
                             </a>
                         </td>
@@ -202,6 +212,5 @@ $diarios_recentes = $pdo->query($sql_recentes)->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 </main>
-
 </body>
 </html>
