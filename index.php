@@ -67,62 +67,45 @@ $stats = obterEstatisticas();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BERIMBAU | Gestão de Capoeira</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/estilo_padrao.css">
     <style>
-        :root { 
-            --primary: #6366f1; --secondary: #0f172a; --bg: #f8fafc; 
-            --sidebar-w: 260px; --sidebar-c: 80px; --accent: #8b5cf6;
-            --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --border: #e2e8f0;
+        /* Estilos específicos para a página de Vivência */
+        .card-vivencia {
+            background: white; 
+            padding: 25px; 
+            border-radius: 20px; 
+            border: 1px solid #e2e8f0; 
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
-        * { box-sizing: border-box; transition: all 0.2s ease; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #1e293b; overflow: hidden; }
-
-        /* SIDEBAR */
-        .sidebar { width: var(--sidebar-w); background: var(--secondary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; }
-        .sidebar.collapsed { width: var(--sidebar-c); }
-        .sidebar-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; min-height: 80px; }
-        
-        .logo-text b { font-size: 20px; letter-spacing: -1px; display: block; }
-        .logo-text small { font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase; font-weight: 400; line-height: 1.2; }
-        
-        .sidebar.collapsed .logo-text, .sidebar.collapsed span, .sidebar.collapsed .footer-info { display: none; }
-        
-        .menu-list { list-style: none; padding: 15px; flex-grow: 1; margin: 0; }
-        .menu-item { text-decoration: none; color: #94a3b8; display: flex; align-items: center; padding: 12px 15px; border-radius: 12px; margin-bottom: 5px; font-size: 14px; }
-        .menu-item:hover, .menu-item.active { background: rgba(99, 102, 241, 0.1); color: white; }
-        .menu-item i { width: 25px; font-size: 18px; margin-right: 10px; }
-
-        /* CONTEÚDO */
-        .main { flex: 1; overflow-y: auto; padding: 40px; position: relative; }
-        .top-bar { margin-bottom: 30px; }
-        
-        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; margin-bottom: 40px; }
-        .stat-card { background: white; padding: 25px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .stat-icon { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 20px; }
-        .stat-data h3 { margin: 0; font-size: 24px; color: var(--secondary); }
-        .stat-data p { margin: 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-
-        .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        input, select, textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; font-size: 14px; margin-top: 8px; }
-        
-        .aluno-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid var(--border); }
-        .avatar { width: 45px; height: 45px; border-radius: 12px; object-fit: cover; margin-right: 15px; }
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 25px; text-decoration: none; display: inline-block; text-align: center; }
-        
-        .badge-status { font-size: 9px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; font-weight: bold; }
-        .status-ativo { background: #dcfce7; color: #166534; }
-        .status-pendente { background: #fef3c7; color: #92400e; }
+        .card-vivencia:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            border-color: var(--primary);
+        }
+        .icon-vivencia {
+            background: #f1f5f9; 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 15px;
+        }
     </style>
 </head>
-<body>
+<body class="app-layout">
 
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="logo-text">
-            <b>BERIMBAU<span style="color:var(--primary)"></span></b>
+            <b>BERIMBAU<span style="color:var(--primary)">.</span></b>
             <small>Gestão de Capoeira</small>
         </div>
-        <button onclick="toggleSidebar()" style="background:none; border:none; color:white; cursor:pointer;"><i class="fas fa-bars"></i></button>
+        <button onclick="toggleSidebar()" class="btn-toggle"><i class="fas fa-bars"></i></button>
     </div>
     
     <nav class="menu-list">
@@ -139,6 +122,10 @@ $stats = obterEstatisticas();
             </a>
         <?php endif; ?>
         
+        <a href="?page=vivencia" class="menu-item <?= $page == 'vivencia' ? 'active' : '' ?>">
+            <i class="fas fa-book-reader"></i> <span>Vivência</span>
+        </a>
+
         <?php if ($_SESSION['nivel'] === 'admin'): ?>
             <a href="usuarios.php" class="menu-item">
                 <i class="fas fa-user-shield"></i> <span>Operadores</span>
@@ -146,119 +133,165 @@ $stats = obterEstatisticas();
         <?php endif; ?>
     </nav>
 
-    <div style="padding: 20px; border-top: 1px solid #1e293b;">
-        <div class="footer-info" style="margin-bottom: 15px;">
-            <small style="color: #475569; display:block;">LOGADO COMO</small>
-            <strong style="font-size: 13px;"><?= strtoupper($_SESSION['usuario']) ?></strong>
+    <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div class="user-info" style="margin-bottom: 15px;">
+            <small style="display: block; color: #94a3b8; font-size: 10px; letter-spacing: 1px;">USUÁRIO CONECTADO</small>
+            <strong style="color: white; font-size: 13px;"><?= strtoupper($_SESSION['usuario']) ?></strong>
         </div>
-        <a href="logout.php" style="color: var(--danger); text-decoration:none; font-size: 13px; font-weight:700;">
-            <i class="fas fa-sign-out-alt"></i> <span>SAIR</span>
+        <a href="logout.php" class="btn-logout" style="
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            background: rgba(239, 68, 68, 0.1); 
+            color: #ef4444; 
+            padding: 12px; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            font-weight: 700; 
+            font-size: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        ">
+            <i class="fas fa-sign-out-alt"></i> 
+            <span>SAIR DO SISTEMA</span>
         </a>
     </div>
 </aside>
 
-<main class="main">
+<main class="main-content">
     <?php if ($page == 'dashboard'): ?>
-        <div class="top-bar">
-            <h1 style="font-size: 24px; margin:0;">Olá, <?= explode(' ', $_SESSION['usuario'])[0] ?>!</h1>
-            <p style="color: #64748b; margin: 5px 0 0 0;">Bem-vindo ao Berimbau.</p>
-        </div>
+        <header class="content-header">
+            <h1>Olá, <?= explode(' ', $_SESSION['usuario'])[0] ?>! 👋</h1>
+            <p>Bem-vindo ao sistema da sua escola.</p>
+        </header>
 
-        <div class="grid-stats">
+        <?php if ($_SESSION['nivel'] === 'admin'): 
+            $solicitacoes = array_filter($alunos, function($a) {
+                return empty($a['docente']) || $a['docente'] == 'Selecione...'; 
+            });
+            
+            if (count($solicitacoes) > 0): ?>
+            <div class="alerta-solicitacao" style="background: #fff5f5; border-left: 6px solid #ef4444; padding: 20px; border-radius: 16px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                    <div style="background: #ef4444; color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user-plus" style="font-size: 20px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; color: #991b1b; font-size: 18px;">Cadastros Externos Pendentes</h3>
+                        <p style="margin:0; color: #b91c1c; font-size: 14px;">Existem <strong><?= count($solicitacoes) ?></strong> solicitações aguardando sua autorização.</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <?php foreach(array_slice($solicitacoes, 0, 4) as $sol): ?>
+                        <a href="?edit=<?= $sol['id'] ?>" style="text-decoration:none; background: white; padding: 10px 18px; border-radius: 10px; border: 1px solid #fee2e2; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-user-edit" style="color: #ef4444;"></i> <?= strtoupper($sol['nome']) ?>
+                        </a>
+                    <?php endforeach; ?>
+                    <a href="?page=lista" style="text-decoration:none; background: #ef4444; color: white; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-left: auto;">VER TODAS</a>
+                </div>
+            </div>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <div class="stats-grid">
             <?php if ($_SESSION['nivel'] === 'aluno'): 
                 $frequencia = obterFrequenciaAluno($_SESSION['usuario_id']); 
             ?>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #dcfce7; color: #166534;"><i class="fas fa-check-double"></i></div>
-                    <div class="stat-data"><h3><?= $frequencia['presencas'] ?></h3><p>Presenças</p></div>
+                <div class="card-estatistica">
+                    <div class="icon-box bg-success"><i class="fas fa-check-circle"></i></div>
+                    <div><h2><?= $frequencia['presencas'] ?></h2><small>PRESENÇAS</small></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #fef2f2; color: #b91c1c;"><i class="fas fa-user-times"></i></div>
-                    <div class="stat-data"><h3><?= $frequencia['faltas'] ?></h3><p>Faltas</p></div>
+                <div class="card-estatistica">
+                    <div class="icon-box bg-info"><i class="fas fa-percentage"></i></div>
+                    <div><h2><?= $frequencia['aproveitamento'] ?>%</h2><small>FREQUÊNCIA</small></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fas fa-chart-line"></i></div>
-                    <div class="stat-data"><h3><?= $frequencia['aproveitamento'] ?>%</h3><p>Aproveitamento</p></div>
-                </div>
-
             <?php else: ?>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fas fa-user-graduate"></i></div>
-                    <div class="stat-data"><h3><?= $stats['total'] ?></h3><p>Alunos Ativos</p></div>
+                <div class="card-estatistica">
+                    <div class="icon-box bg-info"><i class="fas fa-user-graduate"></i></div>
+                    <div><h2><?= $stats['total'] ?></h2><small>ALUNOS ATIVOS</small></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #fef2f2; color: #b91c1c;"><i class="fas fa-heartbeat"></i></div>
-                    <div class="stat-data"><h3><?= $stats['alertas_saude'] ?></h3><p>Alertas de Saúde</p></div>
+                <div class="card-estatistica">
+                    <div class="icon-box bg-danger"><i class="fas fa-heartbeat"></i></div>
+                    <div><h2><?= $stats['alertas_saude'] ?></h2><small>ALERTAS SAÚDE</small></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #fef3c7; color: #92400e;"><i class="fas fa-calendar-check"></i></div>
-                    <div class="stat-data"><h3><?= $stats['aulas_mes'] ?? 0 ?></h3><p>Aulas no Mês</p></div>
+                <div class="card-estatistica">
+                    <div class="icon-box bg-warning"><i class="fas fa-calendar-check"></i></div>
+                    <div><h2><?= $stats['aulas_mes'] ?? 0 ?></h2><small>AULAS NO MÊS</small></div>
                 </div>
             <?php endif; ?>
         </div>
 
-        <div class="card-glass">
+        <div class="aviso-box">
             <h4>Avisos da Escola</h4>
-            <p style="font-size: 14px; color: #64748b;">Mantenha seu histórico de saúde sempre atualizado com o instrutor.</p>
+            <p>Mantenha os registros de graduação atualizados para gerar os certificados corretamente.</p>
         </div>
 
     <?php elseif ($page == 'lista'): ?>
-        <div class="card-glass" style="padding:0">
-            <div style="padding: 25px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0">Relação de Alunos</h3>
-                <a href="?page=cadastro" class="btn-primary" style="width:auto; margin:0; padding:10px 20px;">+ Novo Aluno</a>
+        <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <div>
+                <h1 style="margin:0;">Relação de Alunos</h1>
+                <p style="margin:0; color: #64748b;">Gerencie os integrantes da sua escola</p>
             </div>
+            <a href="?page=cadastro" class="btn-berimbau btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;">
+                <i class="fas fa-plus"></i> NOVO ALUNO
+            </a>
+        </header>
+
+        <div class="list-container">
             <?php foreach ($alunos as $a): ?>
-                <div class="aluno-item">
-                    <img src="uploads/<?= $a['foto'] ?? 'padrao.png' ?>" class="avatar">
-                    <div style="flex:1">
-                        <div style="font-weight: 700;"><?= strtoupper($a['nome']) ?> 
-                            <span class="badge-status status-<?= $a['status'] ?? 'pendente' ?>">
-                                <?= $a['status'] ?? 'pendente' ?>
-                            </span>
-                        </div>
-                        <span style="font-size:12px; color:#64748b;"><?= $a['graduacao'] ?></span>
+                <div class="aluno-card">
+                    <img src="uploads/<?= $a['foto'] ?? 'padrao.png' ?>" class="avatar-circle">
+                    <div class="aluno-info">
+                        <strong><?= strtoupper($a['nome']) ?></strong>
+                        <span class="grad-tag"><?= $a['graduacao'] ?></span>
                     </div>
-                    <div class="actions">
-                        <a href="?edit=<?= $a['id'] ?>" style="color:var(--primary); margin-right:15px;"><i class="fas fa-edit"></i></a>
-                        <a href="?delete=<?= $a['id'] ?>" style="color:var(--danger);" onclick="return confirm('Excluir aluno?')"><i class="fas fa-trash"></i></a>
+                    <div class="aluno-actions">
+                        <a href="?edit=<?= $a['id'] ?>" class="btn-edit"><i class="fas fa-edit"></i></a>
+                        <a href="?delete=<?= $a['id'] ?>" class="btn-delete" onclick="return confirm('Excluir aluno?')"><i class="fas fa-trash"></i></a>
                     </div>
                 </div>
             <?php endforeach; ?>
-        </div>
+        </div> 
 
     <?php elseif ($page == 'cadastro'): ?>
-        <div class="card-glass">
-            <h2 style="margin-top:0"><?= $aluno_edicao ? 'Atualizar Aluno' : 'Nova Matrícula' ?></h2>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="id" value="<?= $aluno_edicao['id'] ?? '' ?>">
-                <input type="hidden" name="foto_atual" value="<?= $aluno_edicao['foto'] ?? 'padrao.png' ?>">
-                <div class="form-grid">
-                    <div style="grid-column: span 2;">
-                        <label>Nome Completo</label>
-                        <input type="text" name="nome" required value="<?= $aluno_edicao['nome'] ?? '' ?>">
-                    </div>
-                    <div>
-                        <label>Docente Responsável</label>
-                        <select name="docente" required>
-                            <option value="">Selecione...</option>
-                            <?php 
-                            $lista_docentes = ["MESTRE BIRO", "MESTRE KOSKORÃO", "PROFESSOR RAFAEL", "OUTRO"];
-                            foreach($lista_docentes as $doc): 
-                                $selected = (isset($aluno_edicao['docente']) && $aluno_edicao['docente'] == $doc) ? 'selected' : '';
-                                echo "<option value='$doc' $selected>$doc</option>";
-                            endforeach; 
-                            ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label>E-mail (Login)</label>
-                        <input type="email" name="email" value="<?= $aluno_edicao['email'] ?? '' ?>">
-                    </div>
+        <?php include 'cadastro_aluno.php'; ?>
+
+    <?php elseif ($page == 'vivencia'): ?>
+        <header class="content-header">
+            <h1>Vivência e Saber 👋</h1>
+            <p>Acervo de apoio para a formação do Capoeira.</p>
+        </header>
+
+        <div class="vivencia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div class="card-vivencia">
+                <div>
+                    <div class="icon-vivencia"><i class="fas fa-history" style="font-size: 24px; color: var(--primary);"></i></div>
+                    <h3>Fundamentos e História</h3>
+                    <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Documentos sobre a origem da Capoeira e a linhagem do nosso grupo.</p>
                 </div>
-                <button type="submit" name="btnSalvar" class="btn-primary">SALVAR REGISTRO</button>
-            </form>
+                <a href="#" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">ACESSAR PDF</a>
+            </div>
+
+            <div class="card-vivencia">
+                <div>
+                    <div class="icon-vivencia"><i class="fas fa-music" style="font-size: 24px; color: #10b981;"></i></div>
+                    <h3>Cantigas e Toques</h3>
+                    <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Letras de ladainhas, corridos e áudios de referência para treino.</p>
+                </div>
+                <a href="#" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">OUVIR ÁUDIOS</a>
+            </div>
+
+            <div class="card-vivencia">
+                <div>
+                    <div class="icon-vivencia"><i class="fas fa-scroll" style="font-size: 24px; color: #f59e0b;"></i></div>
+                    <h3>Sistema de Graduação</h3>
+                    <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Manual técnico com os requisitos para cada troca de corda.</p>
+                </div>
+                <a href="#" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">VER MANUAL</a>
+            </div>
         </div>
+        
     <?php endif; ?>
 </main>
 
