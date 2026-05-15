@@ -64,31 +64,59 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../assets/css/estilo_padrao.css">
 
     <style>
-        /* AQUI SÓ FICA O QUE É EXCLUSIVO DO DIÁRIO */
-        .main { flex: 1; overflow-y: auto; padding: 40px; }
-        .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid var(--border); font-size: 12px; color: #64748b; }
-        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        
-        input[type="text"], input[type="date"], textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; }
-        
-        .btn-submit { 
-            border: none; padding: 10px 25px; border-radius: 8px; 
-            font-size: 14px; font-weight: 600; cursor: pointer; color: white; 
-            display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
-        }
-        .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    /* AQUI SÓ FICA O QUE É EXCLUSIVO DO DIÁRIO */
+    .main { flex: 1; overflow-y: auto; padding: 40px; }
+    .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th { background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #64748b; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    
+    /* CORREÇÃO DOS CONTORNOS DOS CAMPOS */
+    input[type="text"], 
+    input[type="date"], 
+    textarea { 
+        width: 100%; 
+        padding: 12px; 
+        border-radius: 10px; 
+        border: 2px solid #cbd5e1; /* Borda mais nítida (cinza médio) */
+        background-color: #ffffff;
+        box-sizing: border-box; 
+        font-family: inherit;
+        font-size: 14px;
+        color: #1e293b;
+        outline: none;
+        transition: all 0.2s ease;
+        margin-top: 5px;
+    }
 
-        .actions-container { display: flex; align-items: center; gap: 20px; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border); }
-        .history-section { margin-top: 50px; }
-        .badge-docente { font-size: 10px; background: #f1f5f9; padding: 3px 8px; border-radius: 5px; color: #475569; }
-        
-        /* Ajuste de links de ação */
-        .btn-edit { color: var(--primary); text-decoration: none; font-weight: bold; font-size: 13px; margin-right: 15px; }
-        .btn-delete { color: var(--danger); text-decoration: none; font-weight: bold; font-size: 13px; }
-    </style>
+    /* Efeito ao clicar no campo para digitar */
+    input[type="text"]:focus, 
+    input[type="date"]:focus, 
+    textarea:focus { 
+        border-color: var(--primary); /* Usa o azul do sistema ao focar */
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); /* Brilho suave ao redor */
+        background-color: #fff;
+    }
+
+    label {
+        font-weight: 700;
+        font-size: 12px;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .btn-submit { 
+        border: none; padding: 12px 25px; border-radius: 10px; 
+        font-size: 14px; font-weight: 600; cursor: pointer; color: white; 
+        display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+        margin-top: 10px;
+    }
+    .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    .actions-container { display: flex; align-items: center; gap: 20px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
+</style>
 </head>
 <body>
 

@@ -33,7 +33,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 // 4. PROCESSAMENTO DE DADOS (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['btnSalvar'])) {
-        // Se for admin e estiver salvando um aluno pendente, o docente_id será o selecionado ou o próprio admin
         $_POST['usuario_id'] = ($_SESSION['nivel'] === 'admin') ? ($_POST['usuario_id'] ?? $_SESSION['usuario_id']) : $_SESSION['usuario_id'];
         
         $nome_foto = $_POST['foto_atual'] ?? 'padrao.png';
@@ -60,9 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $alunos = listarAlunos();
 $stats = obterEstatisticas(); 
 
-// LÓGICA DE SOLICITAÇÕES PENDENTES (Alunos sem docente vinculado)
 $solicitacoes = array_filter($alunos, function($a) {
-    // Um aluno é pendente se o docente_id for nulo, vazio ou 0
     return empty($a['docente_id']) || $a['docente_id'] == 0; 
 });
 ?>
@@ -85,7 +82,6 @@ $solicitacoes = array_filter($alunos, function($a) {
             background: #f1f5f9; width: 50px; height: 50px; border-radius: 12px; 
             display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
         }
-        /* Ajuste para o alerta de pendência */
         .badge-pendente {
             background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 5px;
         }
@@ -244,40 +240,53 @@ $solicitacoes = array_filter($alunos, function($a) {
         <?php include 'cadastro_aluno.php'; ?>
 
     <?php elseif ($page == 'vivencia'): ?>
-        <header class="content-header">
-            <h1>Vivência e Saber 👋</h1>
-            <p>Acervo de apoio para a formação do Capoeira.</p>
+        <?php 
+            $sql_vivencia = "SELECT * FROM vivencia ORDER BY categoria, titulo";
+            $conteudos = $pdo->query($sql_vivencia)->fetchAll();
+        ?>
+        <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <div>
+                <h1 style="margin:0;">Vivência e Saber 👋</h1>
+                <p style="margin:0; color: #64748b;">Acervo de apoio para a formação do Capoeira.</p>
+            </div>
+            <?php if ($_SESSION['nivel'] === 'admin'): ?>
+                <a href="views/admin_vivencia.php" class="btn-berimbau btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background-color: #1e293b;">
+                    <i class="fas fa-plus-circle"></i> NOVO MATERIAL
+                </a>
+            <?php endif; ?>
         </header>
 
         <div class="vivencia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-            <div class="card-vivencia">
-                <div>
-                    <div class="icon-vivencia"><i class="fas fa-history" style="font-size: 24px; color: var(--primary);"></i></div>
-                    <h3>Fundamentos e História</h3>
-                    <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Documentos sobre a origem da Capoeira e a linhagem do nosso grupo.</p>
+            <?php if (count($conteudos) > 0): ?>
+                <?php foreach ($conteudos as $item): ?>
+                    <div class="card-vivencia">
+                        <div>
+                            <div class="icon-vivencia">
+                                <?php 
+                                    if($item['categoria'] == 'historia') echo '<i class="fas fa-history" style="font-size: 24px; color: var(--primary);"></i>';
+                                    elseif($item['categoria'] == 'musica') echo '<i class="fas fa-music" style="font-size: 24px; color: #10b981;"></i>';
+                                    else echo '<i class="fas fa-scroll" style="font-size: 24px; color: #f59e0b;"></i>';
+                                ?>
+                            </div>
+                            <h3><?= htmlspecialchars($item['titulo']) ?></h3>
+                            <p style="color: #64748b; font-size: 14px; line-height: 1.5;"><?= htmlspecialchars($item['descricao']) ?></p>
+                        </div>
+                        <a href="<?= $item['url_conteudo'] ?>" target="_blank" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">
+                            <?php 
+                                if($item['tipo'] == 'pdf') echo 'ACESSAR PDF';
+                                elseif($item['tipo'] == 'audio') echo 'OUVIR ÁUDIO';
+                                else echo 'ACESSAR LINK';
+                            ?>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-folder-open" style="font-size: 40px; margin-bottom: 10px;"></i>
+                    <p>Nenhum conteúdo cadastrado no acervo ainda.</p>
                 </div>
-                <a href="#" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">ACESSAR PDF</a>
-            </div>
-
-            <div class="card-vivencia">
-                <div>
-                    <div class="icon-vivencia"><i class="fas fa-music" style="font-size: 24px; color: #10b981;"></i></div>
-                    <h3>Cantigas e Toques</h3>
-                    <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Letras de ladainhas, corridos e áudios de referência para treino.</p>
-                </div>
-                <a href="#" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">OUVIR ÁUDIOS</a>
-            </div>
-
-            <div class="card-vivencia">
-                <div>
-                    <div class="icon-vivencia"><i class="fas fa-scroll" style="font-size: 24px; color: #f59e0b;"></i></div>
-                    <h3>Sistema de Graduação</h3>
-                    <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Manual técnico com os requisitos para cada troca de corda.</p>
-                </div>
-                <a href="#" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">VER MANUAL</a>
-            </div>
+            <?php endif; ?>
         </div>
-        
     <?php endif; ?>
 </main>
 
