@@ -14,44 +14,49 @@ function buscarAlunoPorId($id) {
 
 function salvarAluno($dados) {
     global $pdo;
-    $foto = $dados['foto'] ?? 'padrao.png';
-    
-    // Garantir que o usuario_id não seja nulo (pega do POST ou da SESSION)
-    $usuario_id = $dados['usuario_id'] ?? ($_SESSION['usuario_id'] ?? null);
 
-    if (!$usuario_id) return false;
+    $senha_hash = "";
+    if (!empty($dados['senha'])) {
+        $senha_hash = password_hash($dados['senha'], PASSWORD_DEFAULT);
+    }
 
-    $sql = "INSERT INTO alunos (foto, nome, apelido, nascimento, celular, email, mae, pai, endereco, cidade, graduacao, docente, local_treino, saude, usuario_id, senha, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+    if (!empty($dados['id']) && empty($dados['senha'])) {
+        $stmt = $pdo->prepare("SELECT senha FROM alunos WHERE id = ?");
+        $stmt->execute([$dados['id']]);
+        $senha_hash = $stmt->fetchColumn();
+    }
+
+    // ON DUPLICATE KEY UPDATE atualizado para incluir o status e docente_id
+    $sql = "INSERT INTO alunos (nome, apelido, email, senha, nascimento, celular, endereco, graduacao, status, docente_id) 
+            VALUES (:nome, :apelido, :email, :senha, :nascimento, :celular, :endereco, :graduacao, :status, :docente_id)
+            ON DUPLICATE KEY UPDATE 
+            nome = VALUES(nome), apelido = VALUES(apelido), email = VALUES(email), 
+            senha = VALUES(senha), nascimento = VALUES(nascimento), celular = VALUES(celular), 
+            endereco = VALUES(endereco), graduacao = VALUES(graduacao), 
+            status = VALUES(status), docente_id = VALUES(docente_id)";
+
     $stmt = $pdo->prepare($sql);
     
+    $status = (!empty($dados['id'])) ? 'ativo' : 'pendente';
+    $docente_id = (!empty($dados['docente_id'])) ? $dados['docente_id'] : null;
+
     return $stmt->execute([
-        $foto,
-        $dados['nome'] ?? '',
-        $dados['apelido'] ?? '',
-        $dados['nascimento'] ?? date('Y-m-d'),
-        $dados['celular'] ?? '',
-        $dados['email'] ?? '',
-        $dados['mae'] ?? '',
-        $dados['pai'] ?? '',
-        $dados['endereco'] ?? '',
-        $dados['cidade'] ?? '',
-        $dados['graduacao'] ?? 'INICIANTE',
-        $dados['docente'] ?? '',
-        $dados['local_treino'] ?? '',
-        $dados['saude'] ?? '',
-        $usuario_id,
-        $dados['senha'] ?? null, // Senha já deve vir criptografada do index.php
-        $dados['status'] ?? 'pendente'
+        ':nome'        => $dados['nome'],
+        ':apelido'     => $dados['apelido'],
+        ':email'       => $dados['email'],
+        ':senha'       => $senha_hash,
+        ':nascimento'  => $dados['nascimento'],
+        ':celular'     => $dados['celular'],
+        ':endereco'    => $dados['endereco'],
+        ':graduacao'   => $dados['graduacao'],
+        ':status'      => $status,
+        ':docente_id'  => $docente_id
     ]);
 }
 
 function atualizarAluno($dados) {
     global $pdo;
     
-    // Preparação dinâmica para a senha: só atualiza se uma nova senha for definida
-    $sql_senha = "";
     $params = [
         $dados['foto'] ?? 'padrao.png',
         $dados['nome'], 
@@ -65,12 +70,14 @@ function atualizarAluno($dados) {
         $dados['cidade'] ?? '', 
         $dados['graduacao'], 
         $dados['docente'] ?? '', 
+        $dados['docente_id'] ?? null,
         $dados['local_treino'] ?? '', 
         $dados['saude'] ?? '', 
         $dados['usuario_id'],
         $dados['status'] ?? 'pendente'
     ];
 
+    $sql_senha = "";
     if (!empty($dados['senha'])) {
         $sql_senha = ", senha = ?";
         $params[] = $dados['senha'];
@@ -80,7 +87,7 @@ function atualizarAluno($dados) {
 
     $sql = "UPDATE alunos SET 
                 foto=?, nome=?, apelido=?, nascimento=?, celular=?, email=?, 
-                mae=?, pai=?, endereco=?, cidade=?, graduacao=?, docente=?, 
+                mae=?, pai=?, endereco=?, cidade=?, graduacao=?, docente=?, docente_id=?,
                 local_treino=?, saude=?, usuario_id=?, status=? 
                 $sql_senha 
             WHERE id=?";
@@ -91,51 +98,47 @@ function atualizarAluno($dados) {
 
 function excluirAluno($id) {
     global $pdo;
-    $nivel = $_SESSION['nivel'];
-    $usuario_nome = $_SESSION['usuario'];
+    $nivel = $_SESSION['nivel'] ?? 'visitante';
+    $usuario_id = $_SESSION['usuario_id'];
 
     if ($nivel === 'admin') {
         $stmt = $pdo->prepare("DELETE FROM alunos WHERE id = ?");
         return $stmt->execute([$id]);
     } else {
-        // Só deleta se o ID do aluno pertencer ao docente logado
-        $stmt = $pdo->prepare("DELETE FROM alunos WHERE id = ? AND docente = ?");
-        return $stmt->execute([$id, $usuario_nome]);
+        $stmt = $pdo->prepare("DELETE FROM alunos WHERE id = ? AND docente_id = ?");
+        return $stmt->execute([$id, $usuario_id]);
     }
 }
 
 function listarAlunos() {
     global $pdo;
-    $nivel = $_SESSION['nivel'] ?? 'docente';
-    $usuario_nome = $_SESSION['usuario']; // Nome do docente logado (ex: "MESTRE BIRO")
+    $nivel = $_SESSION['nivel'] ?? 'visitante';
+    $usuario_id = $_SESSION['usuario_id'];
 
     if ($nivel === 'admin') {
-        // Admin vê absolutamente tudo
         $stmt = $pdo->query("SELECT * FROM alunos ORDER BY nome ASC");
     } else {
-        // Docente vê apenas alunos onde o campo 'docente' coincide com o seu nome de usuário
-        $stmt = $pdo->prepare("SELECT * FROM alunos WHERE docente = ? ORDER BY nome ASC");
-        $stmt->execute([$usuario_nome]);
+        $stmt = $pdo->prepare("SELECT * FROM alunos WHERE docente_id = ? ORDER BY nome ASC");
+        $stmt->execute([$usuario_id]);
     }
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function obterEstatisticas() {
     global $pdo;
-    $nivel = $_SESSION['nivel'] ?? 'docente';
-    $usuario_nome = $_SESSION['usuario'];
+    $nivel = $_SESSION['nivel'] ?? 'visitante';
+    $usuario_id = $_SESSION['usuario_id'];
 
     if ($nivel === 'admin') {
         $total = $pdo->query("SELECT COUNT(*) FROM alunos")->fetchColumn();
         $alertas = $pdo->query("SELECT COUNT(*) FROM alunos WHERE saude != '' AND saude IS NOT NULL")->fetchColumn();
     } else {
-        // Filtra contagem pelo nome do docente
-        $stmtT = $pdo->prepare("SELECT COUNT(*) FROM alunos WHERE docente = ?");
-        $stmtT->execute([$usuario_nome]);
+        $stmtT = $pdo->prepare("SELECT COUNT(*) FROM alunos WHERE docente_id = ?");
+        $stmtT->execute([$usuario_id]);
         $total = $stmtT->fetchColumn();
 
-        $stmtA = $pdo->prepare("SELECT COUNT(*) FROM alunos WHERE docente = ? AND saude != '' AND saude IS NOT NULL");
-        $stmtA->execute([$usuario_nome]);
+        $stmtA = $pdo->prepare("SELECT COUNT(*) FROM alunos WHERE docente_id = ? AND saude != '' AND saude IS NOT NULL");
+        $stmtA->execute([$usuario_id]);
         $alertas = $stmtA->fetchColumn();
     }
 
@@ -143,7 +146,7 @@ function obterEstatisticas() {
 }
 
 // ==========================================
-// 2. FUNÇÕES DE USUÁRIOS (GESTÃO E ACESSO)
+// 2. FUNÇÕES DE USUÁRIOS
 // ==========================================
 
 function buscarUsuarioPorId($id) {
@@ -179,35 +182,13 @@ function listarUsuarios() {
 
 function listarUsuariosDocentes() {
     global $pdo;
-    return $pdo->query("SELECT id, usuario FROM usuarios WHERE nivel = 'docente' ORDER BY usuario ASC")->fetchAll(PDO::FETCH_ASSOC);
+    return $pdo->query("SELECT id, usuario FROM usuarios WHERE nivel != 'admin' ORDER BY usuario ASC")->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function excluirUsuario($id) {
     global $pdo;
     if ($id == $_SESSION['usuario_id']) return false; 
     return $pdo->prepare("DELETE FROM usuarios WHERE id = ?")->execute([$id]);
-}
-
-function preCadastroAluno($dados) {
-    global $pdo;
-    $senhaHash = password_hash($dados['senha'], PASSWORD_DEFAULT);
-    
-    // Agora salvamos 'docente' (o nome selecionado) e definimos o status como 'pendente'
-    $sql = "INSERT INTO alunos (nome, email, senha, status, graduacao, docente, usuario_id) 
-            VALUES (?, ?, ?, 'pendente', 'INICIANTE', ?, ?)";
-    
-    $stmt = $pdo->prepare($sql);
-    
-    // usuario_id pode ser 0 ou o ID de um admin principal para monitoramento
-    $admin_id = 1; 
-
-    return $stmt->execute([
-        $dados['nome'], 
-        $dados['email'], 
-        $senhaHash, 
-        $dados['docente'], 
-        $admin_id
-    ]);
 }
 
 // ==========================================
@@ -248,7 +229,7 @@ function salvarAula($dados, $alunoid_presentes) {
 
 function listarAulasRecentes() {
     global $pdo;
-    $nivel = $_SESSION['nivel'] ?? 'docente';
+    $nivel = $_SESSION['nivel'] ?? 'visitante';
     $usuario_id = $_SESSION['usuario_id'] ?? 0;
 
     if ($nivel === 'admin') {
@@ -266,11 +247,8 @@ function listarAulasRecentes() {
 
 function obterFrequenciaAluno($aluno_id) {
     global $pdo;
-    
-    // Total de aulas que ocorreram para a turma desse aluno (ou geral)
     $total_aulas = $pdo->query("SELECT COUNT(*) FROM aulas")->fetchColumn();
     
-    // Total de presenças do aluno
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM presencas WHERE aluno_id = ?");
     $stmt->execute([$aluno_id]);
     $presencas = $stmt->fetchColumn();

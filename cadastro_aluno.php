@@ -1,20 +1,34 @@
 <?php
-// Lógica para carregar dados em caso de edição
+// cadastro_aluno.php - Versão Unificada (Admin e Externo)
 require_once 'includes/funcoes_alunos.php';
 
 $aluno_edicao = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $aluno_edicao = buscarAlunoPorId($_GET['edit']);
 }
-?>
 
+// Verifica se quem está vendo a página é um Admin logado
+$is_admin = isset($_SESSION['usuario_id']);
+?>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
+    :root {
+        --primary: #1e293b;
+        --secondary: #6366f1;
+        --border: #e2e8f0;
+        --danger: #ef4444;
+        --bg-input: #f8fafc;
+    }
+
     .matricula-container {
         background: white;
         padding: 30px;
         border-radius: 24px;
         border: 1px solid var(--border);
         box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+        max-width: 1000px;
+        margin: 20px auto;
+        font-family: 'Inter', sans-serif;
     }
 
     .form-header {
@@ -58,8 +72,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         padding: 12px;
         border: 1px solid var(--border);
         border-radius: 10px;
-        background: #f8fafc;
+        background: var(--bg-input);
         font-size: 14px;
+        box-sizing: border-box;
     }
 
     .required-mark::after { content: " *"; color: var(--danger); }
@@ -71,6 +86,29 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         padding-top: 20px;
         border-top: 1px solid var(--border);
     }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .btn-cancelar {
+        flex: 1;
+        text-align: center;
+        padding: 15px;
+        background: #f1f5f9;
+        color: #64748b;
+        text-decoration: none;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 700;
+    }
 </style>
 
 <div class="matricula-container">
@@ -79,11 +117,10 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         <small style="color:#64748b">BERIMBAU - SISTEMA DE GESTÃO PARA ESCOLAS DE CAPOEIRA</small>
     </div>
 
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" action="<?= $is_admin ? 'processar_cadastro.php' : 'processa_externo.php' ?>" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= $aluno_edicao['id'] ?? '' ?>">
-        <input type="hidden" name="foto_atual" value="<?= $aluno_edicao['foto'] ?? 'padrao.png' ?>">
 
-        <div class="section-title">1. Identificação Individual</div>
+        <div class="section-title">1. Identificação e Acesso</div>
         <div class="grid-row">
             <div class="form-group-full">
                 <label class="label-matricula required-mark">Nome Completo</label>
@@ -94,24 +131,24 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 <input type="text" name="apelido" class="input-matricula" value="<?= $aluno_edicao['apelido'] ?? '' ?>">
             </div>
             <div>
-                <label class="label-matricula required-mark">Data de Nascimento</label>
-                <input type="date" name="nascimento" class="input-matricula" required value="<?= $aluno_edicao['nascimento'] ?? '' ?>">
+                <label class="label-matricula required-mark">E-mail (Seu Login)</label>
+                <input type="email" name="email" class="input-matricula" required value="<?= $aluno_edicao['email'] ?? '' ?>">
+            </div>
+            <div>
+                <label class="label-matricula <?= !$aluno_edicao ? 'required-mark' : '' ?>">Senha de Acesso</label>
+                <input type="password" name="senha" class="input-matricula" <?= !$aluno_edicao ? 'required' : '' ?> placeholder="Defina sua senha">
             </div>
         </div>
 
         <div class="section-title">2. Contato e Endereço</div>
         <div class="grid-row">
             <div>
-                <label class="label-matricula required-mark">Número do Celular (WhatsApp)</label>
+                <label class="label-matricula required-mark">WhatsApp</label>
                 <input type="tel" name="celular" class="input-matricula" required value="<?= $aluno_edicao['celular'] ?? '' ?>">
             </div>
             <div>
-                <label class="label-matricula">E-mail</label>
-                <input type="email" name="email" class="input-matricula" value="<?= $aluno_edicao['email'] ?? '' ?>">
-            </div>
-            <div>
-                <label class="label-matricula required-mark">Nome da Mãe</label>
-                <input type="text" name="mae" class="input-matricula" required value="<?= $aluno_edicao['mae'] ?? '' ?>">
+                <label class="label-matricula required-mark">Data de Nascimento</label>
+                <input type="date" name="nascimento" class="input-matricula" required value="<?= $aluno_edicao['nascimento'] ?? '' ?>">
             </div>
             <div class="form-group-full">
                 <label class="label-matricula required-mark">Endereço Completo</label>
@@ -119,7 +156,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             </div>
         </div>
 
-        <div class="section-title">3. Dados Técnicos e Foto</div>
+        <div class="section-title">3. Dados Técnicos e Docente</div>
         <div class="grid-row">
             <div>
                 <label class="label-matricula required-mark">Graduação</label>
@@ -138,14 +175,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 <select name="docente" class="input-matricula" required>
                     <option value="">Selecione...</option>
                     <?php 
-                    $lista_docentes = [
-                        "MESTRE BIRO", "MESTRE KOSKORÃO", "CONTRAMESTRE GALEGO", 
-                        "CONTRAMESTRE MUTUM", "CONTRAMESTRE CHIQUINHO", "CONTRAMESTRE AMENDOIM", 
-                        "CONTRAMESTRE COYOT", "PROFESSOR TUIUIÚ", "PROFESSOR RAFAEL", 
-                        "PROFESSORA CIGANA", "PROFESSOR CAVALLO", "PROFESSOR SAGUI", 
-                        "PROFESSOR CALADO", "INSTRUTOR ESQUILO", "INSTRUTORA SEREIA", 
-                        "GRADUADO DUDU", "GRADUADO GUERREIRO", "GRADUADO BIG"
-                    ];
+                    $lista_docentes = ["MESTRE BIRO", "MESTRE KOSKORÃO", "CONTRAMESTRE GALEGO", "PROFESSOR TUIUIÚ"]; // Sua lista completa aqui
                     foreach($lista_docentes as $d):
                         $sel = (isset($aluno_edicao['docente']) && $aluno_edicao['docente'] == $d) ? 'selected' : '';
                         echo "<option value='$d' $sel>$d</option>";
@@ -153,25 +183,13 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                     ?>
                 </select>
             </div>
-            <div class="form-group-full">
-                <label class="label-matricula">Foto de Identificação</label>
-                <input type="file" name="foto" class="input-matricula" accept="image/*">
-            </div>
-        </div>
-
-        <div class="section-title">4. Saúde e Cuidados</div>
-        <div class="form-group-full">
-            <label class="label-matricula">Observações Médicas ou Cuidados Especiais</label>
-            <textarea name="saude" rows="3" class="input-matricula" placeholder="Alergias, lesões..."><?= $aluno_edicao['saude'] ?? '' ?></textarea>
         </div>
 
         <div class="btn-area-matricula">
-            <button type="submit" name="btnSalvar" class="btn-berimbau btn-primary" style="flex:2; justify-content: center; font-size: 15px;">
-                <i class="fas fa-save" style="margin-right: 8px;"></i> <?= $aluno_edicao ? 'ATUALIZAR CADASTRO' : 'SALVAR MATRÍCULA 2026' ?>
+            <button type="submit" class="btn-primary" style="flex:2;">
+                <?= $aluno_edicao ? 'ATUALIZAR CADASTRO' : 'ENVIAR SOLICITAÇÃO / SALVAR' ?>
             </button>
-            <a href="index.php?page=lista" class="btn-berimbau" style="flex:1; background:#f1f5f9; color:#64748b; text-decoration:none; display:flex; align-items:center; justify-content:center;">
-                CANCELAR
-            </a>
+            <a href="<?= $is_admin ? 'index.php?page=lista' : 'login_view.php' ?>" class="btn-cancelar">CANCELAR</a>
         </div>
     </form>
 </div>

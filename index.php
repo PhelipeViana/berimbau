@@ -24,17 +24,21 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     exit;
 }
 
-// 3. CARREGAR DADOS PARA EDIÇÃO
+// 3. CARREGAR DADOS PARA EDIÇÃO (Utilizado para validar solicitações do Dashboard)
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $aluno_edicao = buscarAlunoPorId($_GET['edit']);
-    if ($aluno_edicao) $page = 'cadastro';
+    if ($aluno_edicao) {
+        $page = 'cadastro'; // Abre o formulário de cadastro em modo edição
+    }
 }
 
 // 4. PROCESSAMENTO DE DADOS (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['btnSalvar'])) {
-        $_POST['usuario_id'] = ($_SESSION['nivel'] === 'admin') ? ($_POST['usuario_id'] ?? $_SESSION['usuario_id']) : $_SESSION['usuario_id'];
+        // Define quem é o docente responsável (Admin pode escolher, Operador é ele mesmo)
+        $_POST['docente_id'] = ($_SESSION['nivel'] === 'admin') ? ($_POST['docente_id'] ?? $_SESSION['usuario_id']) : $_SESSION['usuario_id'];
         
+        // Processamento da Foto
         $nome_foto = $_POST['foto_atual'] ?? 'padrao.png';
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === 0) {
             $extensao = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
@@ -45,11 +49,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $_POST['foto'] = $nome_foto;
 
+        // Processamento de Senha (Segurança: mantém a atual se não houver nova)
         if (!empty($_POST['nova_senha'])) {
             $_POST['senha'] = password_hash($_POST['nova_senha'], PASSWORD_DEFAULT);
         }
 
-        !empty($_POST['id']) ? atualizarAluno($_POST) : salvarAluno($_POST);
+        // Se o status foi alterado para 'ativo' no form, a função salvarAluno/atualizarAluno fará o commit
+        if (!empty($_POST['id'])) {
+            atualizarAluno($_POST);
+        } else {
+            salvarAluno($_POST);
+        }
+
+        // Redireciona para a lista. Se era uma solicitação, ela já não aparecerá mais como pendente.
         header("Location: index.php?page=lista&msg=sucesso");
         exit;
     }
@@ -59,8 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $alunos = listarAlunos();
 $stats = obterEstatisticas(); 
 
+// Lógica de Solicitações: Alunos que não tem docente vinculado OU estão com status pendente
 $solicitacoes = array_filter($alunos, function($a) {
-    return empty($a['docente_id']) || $a['docente_id'] == 0; 
+    return (empty($a['docente_id']) || $a['docente_id'] == 0 || $a['status'] === 'pendente'); 
 });
 ?>
 
@@ -85,6 +98,10 @@ $solicitacoes = array_filter($alunos, function($a) {
         .badge-pendente {
             background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 5px;
         }
+        .msg-alerta { 
+            background: #dcfce7; color: #166534; padding: 15px; border-radius: 12px; 
+            margin-bottom: 20px; text-align: center; font-weight: bold; border: 1px solid #bbf7d0;
+        }
     </style>
 </head>
 <body class="app-layout">
@@ -104,7 +121,7 @@ $solicitacoes = array_filter($alunos, function($a) {
         </a>
         
         <?php if ($_SESSION['nivel'] !== 'aluno'): ?>
-            <a href="?page=lista" class="menu-item <?= ($page == 'lista' || (isset($_GET['pendentes']))) ? 'active' : '' ?>">
+            <a href="?page=lista" class="menu-item <?= ($page == 'lista' || (isset($_GET['filter']) && $_GET['filter'] == 'pendentes')) ? 'active' : '' ?>">
                 <i class="fas fa-users"></i> <span>Alunos</span>
                 <?php if(count($solicitacoes) > 0) echo '<span class="badge-pendente">'.count($solicitacoes).'</span>'; ?>
             </a>
@@ -115,6 +132,10 @@ $solicitacoes = array_filter($alunos, function($a) {
         
         <a href="?page=vivencia" class="menu-item <?= $page == 'vivencia' ? 'active' : '' ?>">
             <i class="fas fa-book-reader"></i> <span>Vivência</span>
+        </a>
+
+        <a href="?page=competicao" class="menu-item <?= $page == 'competicao' ? 'active' : '' ?>">
+            <i class="fas fa-trophy"></i> <span>Competição</span>
         </a>
 
         <?php if ($_SESSION['nivel'] === 'admin'): ?>
@@ -136,6 +157,15 @@ $solicitacoes = array_filter($alunos, function($a) {
 </aside>
 
 <main class="main-content">
+
+    <?php if(isset($_GET['msg'])): ?>
+        <?php if($_GET['msg'] == 'inscrito_sucesso'): ?>
+            <div class="msg-alerta">Inscrição confirmada! Bom treino, camarada!</div>
+        <?php elseif($_GET['msg'] == 'sucesso'): ?>
+            <div class="msg-alerta">Ação realizada com sucesso!</div>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <?php if ($page == 'dashboard'): ?>
         <header class="content-header">
             <h1>Olá, <?= explode(' ', $_SESSION['usuario'])[0] ?>! 👋</h1>
@@ -149,14 +179,14 @@ $solicitacoes = array_filter($alunos, function($a) {
                         <i class="fas fa-user-plus" style="font-size: 20px;"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; color: #991b1b; font-size: 18px;">Cadastros Externos Pendentes</h3>
-                        <p style="margin:0; color: #b91c1c; font-size: 14px;">Existem <strong><?= count($solicitacoes) ?></strong> solicitações aguardando vínculo de docente.</p>
+                        <h3 style="margin:0; color: #991b1b; font-size: 18px;">Novas Solicitações de Inclusão</h3>
+                        <p style="margin:0; color: #b91c1c; font-size: 14px;">Clique no nome para validar e ativar o cadastro.</p>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <?php foreach(array_slice($solicitacoes, 0, 4) as $sol): ?>
-                        <a href="?edit=<?= $sol['id'] ?>" style="text-decoration:none; background: white; padding: 10px 18px; border-radius: 10px; border: 1px solid #fee2e2; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-user-check" style="color: #ef4444;"></i> <?= strtoupper($sol['nome']) ?>
+                    <?php foreach(array_slice($solicitacoes, 0, 6) as $sol): ?>
+                        <a href="?edit=<?= $sol['id'] ?>" style="text-decoration:none; background: white; padding: 10px 18px; border-radius: 10px; border: 1px solid #fee2e2; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px; transition: 0.2s;">
+                            <i class="fas fa-id-badge" style="color: #ef4444;"></i> <?= strtoupper($sol['nome']) ?>
                         </a>
                     <?php endforeach; ?>
                     <a href="?page=lista&filter=pendentes" style="text-decoration:none; background: #ef4444; color: white; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-left: auto;">VER TODAS</a>
@@ -192,20 +222,13 @@ $solicitacoes = array_filter($alunos, function($a) {
             <?php endif; ?>
         </div>
 
-        <div class="aviso-box">
-            <h4>Avisos da Escola</h4>
-            <p>Mantenha os registros de graduação atualizados para gerar os certificados corretamente.</p>
-        </div>
-
     <?php elseif ($page == 'lista'): ?>
         <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <div>
-                <h1 style="margin:0;">
-                    <?= (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? 'Solicitações de Cadastro' : 'Relação de Alunos' ?>
-                </h1>
-                <p style="margin:0; color: #64748b;">Gerencie os integrantes da sua escola</p>
+                <h1><?= (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? 'Solicitações Pendentes' : 'Relação de Alunos' ?></h1>
+                <p style="color: #64748b;">Gerencie os integrantes da sua escola</p>
             </div>
-            <a href="?page=cadastro" class="btn-berimbau btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;">
+            <a href="?page=cadastro" class="btn-berimbau btn-primary" style="text-decoration: none; padding: 12px 24px;">
                 <i class="fas fa-plus"></i> NOVO ALUNO
             </a>
         </header>
@@ -213,28 +236,24 @@ $solicitacoes = array_filter($alunos, function($a) {
         <div class="list-container">
             <?php 
             $exibir_alunos = (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? $solicitacoes : $alunos;
-            
-            if(empty($exibir_alunos)): ?>
-                <div style="text-align:center; padding:50px; color:#94a3b8;">Nenhum registro encontrado.</div>
-            <?php endif;
-
-            foreach ($exibir_alunos as $a): ?>
-                <div class="aluno-card" style="<?= (empty($a['docente_id'])) ? 'border-left: 4px solid #ef4444;' : '' ?>">
-                    <img src="uploads/<?= $a['foto'] ?? 'padrao.png' ?>" class="avatar-circle">
-                    <div class="aluno-info">
-                        <strong><?= strtoupper($a['nome']) ?></strong>
-                        <span class="grad-tag"><?= $a['graduacao'] ?></span>
-                        <?php if(empty($a['docente_id'])): ?>
-                            <small style="color:#ef4444; font-weight:bold; display:block; margin-top:5px;">AGUARDANDO DOCENTE</small>
-                        <?php endif; ?>
+            if (count($exibir_alunos) > 0):
+                foreach ($exibir_alunos as $a): ?>
+                    <div class="aluno-card" style="<?= (empty($a['docente_id']) || $a['status'] == 'pendente') ? 'border-left: 4px solid #ef4444;' : '' ?>">
+                        <img src="uploads/<?= $a['foto'] ?? 'padrao.png' ?>" class="avatar-circle">
+                        <div class="aluno-info">
+                            <strong><?= strtoupper($a['nome']) ?></strong>
+                            <span class="grad-tag"><?= $a['graduacao'] ?></span>
+                        </div>
+                        <div class="aluno-actions">
+                            <a href="?edit=<?= $a['id'] ?>" class="btn-edit" title="Editar / Validar"><i class="fas fa-edit"></i></a>
+                            <a href="?delete=<?= $a['id'] ?>" class="btn-delete" onclick="return confirm('Deseja excluir este registro?')"><i class="fas fa-trash"></i></a>
+                        </div>
                     </div>
-                    <div class="aluno-actions">
-                        <a href="?edit=<?= $a['id'] ?>" class="btn-edit" title="Editar / Autorizar"><i class="fas fa-edit"></i></a>
-                        <a href="?delete=<?= $a['id'] ?>" class="btn-delete" onclick="return confirm('Excluir aluno?')"><i class="fas fa-trash"></i></a>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div> 
+                <?php endforeach; 
+            else: ?>
+                <p style="text-align: center; color: #94a3b8; padding: 40px;">Nenhum aluno encontrado nesta categoria.</p>
+            <?php endif; ?>
+        </div>
 
     <?php elseif ($page == 'cadastro'): ?>
         <?php include 'cadastro_aluno.php'; ?>
@@ -246,44 +265,96 @@ $solicitacoes = array_filter($alunos, function($a) {
         ?>
         <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <div>
-                <h1 style="margin:0;">Vivência e Saber 👋</h1>
-                <p style="margin:0; color: #64748b;">Acervo de apoio para a formação do Capoeira.</p>
+                <h1>Vivência e Saber 👋</h1>
+                <p style="color: #64748b;">Acervo de apoio para a formação do Capoeira.</p>
             </div>
             <?php if ($_SESSION['nivel'] === 'admin'): ?>
-                <a href="views/admin_vivencia.php" class="btn-berimbau btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background-color: #1e293b;">
+                <a href="views/admin_vivencia.php" class="btn-berimbau btn-primary" style="text-decoration: none; padding: 12px 24px;">
                     <i class="fas fa-plus-circle"></i> NOVO MATERIAL
                 </a>
             <?php endif; ?>
         </header>
 
-        <div class="vivencia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-            <?php if (count($conteudos) > 0): ?>
-                <?php foreach ($conteudos as $item): ?>
-                    <div class="card-vivencia">
-                        <div>
-                            <div class="icon-vivencia">
-                                <?php 
-                                    if($item['categoria'] == 'historia') echo '<i class="fas fa-history" style="font-size: 24px; color: var(--primary);"></i>';
-                                    elseif($item['categoria'] == 'musica') echo '<i class="fas fa-music" style="font-size: 24px; color: #10b981;"></i>';
-                                    else echo '<i class="fas fa-scroll" style="font-size: 24px; color: #f59e0b;"></i>';
-                                ?>
-                            </div>
-                            <h3><?= htmlspecialchars($item['titulo']) ?></h3>
-                            <p style="color: #64748b; font-size: 14px; line-height: 1.5;"><?= htmlspecialchars($item['descricao']) ?></p>
-                        </div>
-                        <a href="<?= $item['url_conteudo'] ?>" target="_blank" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">
+        <div class="vivencia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <?php foreach ($conteudos as $item): ?>
+                <div class="card-vivencia">
+                    <div>
+                        <div class="icon-vivencia">
                             <?php 
-                                if($item['tipo'] == 'pdf') echo 'ACESSAR PDF';
-                                elseif($item['tipo'] == 'audio') echo 'OUVIR ÁUDIO';
-                                else echo 'ACESSAR LINK';
+                                if($item['categoria'] == 'historia') echo '<i class="fas fa-history" style="font-size: 24px; color: var(--primary);"></i>';
+                                elseif($item['categoria'] == 'musica') echo '<i class="fas fa-music" style="font-size: 24px; color: #10b981;"></i>';
+                                else echo '<i class="fas fa-scroll" style="font-size: 24px; color: #f59e0b;"></i>';
                             ?>
-                        </a>
+                        </div>
+                        <h3><?= htmlspecialchars($item['titulo']) ?></h3>
+                        <p style="color: #64748b; font-size: 14px;"><?= htmlspecialchars($item['descricao']) ?></p>
+                    </div>
+                    <a href="<?= $item['url_conteudo'] ?>" target="_blank" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">
+                        ACESSAR CONTEÚDO
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+    <?php elseif ($page == 'competicao'): ?>
+        <?php 
+            $sql_comp = "SELECT * FROM competicoes ORDER BY data_evento DESC";
+            $eventos = $pdo->query($sql_comp)->fetchAll();
+        ?>
+        <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <div>
+                <h1>Competições e Eventos 🏆</h1>
+                <p style="color: #64748b;">Acompanhe campeonatos e torneios internos.</p>
+            </div>
+            <?php if ($_SESSION['nivel'] === 'admin'): ?>
+                <a href="views/admin_competicao.php" class="btn-berimbau btn-primary" style="text-decoration: none; padding: 12px 24px;">
+                    <i class="fas fa-calendar-plus"></i> NOVO EVENTO
+                </a>
+            <?php endif; ?>
+        </header>
+
+        <div class="competicao-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
+            <?php if (count($eventos) > 0): ?>
+                <?php foreach ($eventos as $ev): ?>
+                    <div class="card-vivencia" style="border-left: 5px solid <?= $ev['status'] == 'inscricoes_abertas' ? '#10b981' : '#64748b' ?>;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span class="status-tag" style="font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 20px; background: #f1f5f9;">
+                                <?= strtoupper(str_replace('_', ' ', $ev['status'])) ?>
+                            </span>
+                            <span style="font-size: 12px; color: #94a3b8;"><i class="far fa-calendar-alt"></i> <?= date('d/m/Y', strtotime($ev['data_evento'])) ?></span>
+                        </div>
+                        <h3 style="margin: 15px 0;"><?= htmlspecialchars($ev['nome_evento']) ?></h3>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;"><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($ev['local_evento']) ?></p>
+
+                        <?php if ($_SESSION['nivel'] === 'admin'): ?>
+                            <?php
+                                $stmt_cont = $pdo->prepare("SELECT COUNT(*) FROM inscricoes_competicao WHERE competicao_id = ?");
+                                $stmt_cont->execute([$ev['id']]);
+                                $total_inscritos = $stmt_cont->fetchColumn();
+                            ?>
+                            <div style="margin-bottom: 15px; padding: 8px; background: #f0f9ff; border-radius: 8px; font-size: 12px; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-users"></i> <strong><?= $total_inscritos ?></strong> Alunos confirmados
+                            </div>
+                        <?php endif; ?>
+
+                        <div style="display: flex; gap: 10px;">
+                            <a href="<?= $ev['edital_url'] ?: '#' ?>" target="_blank" class="btn-berimbau" style="flex: 1; text-align: center; text-decoration: none; padding: 10px; border-radius: 8px; background: #f1f5f9; font-weight: bold; font-size: 12px;">REGRAS</a>
+                            
+                            <?php if ($ev['status'] == 'inscricoes_abertas'): ?>
+                                <a href="inscrever_aluno.php?id=<?= $ev['id'] ?>" 
+                                   class="btn-berimbau btn-primary" 
+                                   style="flex: 1; text-align: center; text-decoration: none; padding: 10px; border-radius: 8px; font-size: 12px;"
+                                   onclick="return confirm('Confirmar inscrição?')">
+                                   INSCREVER-SE
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8;">
-                    <i class="fas fa-folder-open" style="font-size: 40px; margin-bottom: 10px;"></i>
-                    <p>Nenhum conteúdo cadastrado no acervo ainda.</p>
+                <div style="grid-column: 1 / -1; text-align: center; padding: 60px; background: white; border-radius: 24px; border: 2px dashed #e2e8f0;">
+                    <i class="fas fa-medal" style="font-size: 50px; color: #cbd5e1; margin-bottom: 15px;"></i>
+                    <p style="color: #94a3b8;">Nenhuma competição agendada.</p>
                 </div>
             <?php endif; ?>
         </div>
