@@ -190,6 +190,9 @@ function buscarUsuarioPorId($id) {
 
 function atualizarUsuario($id, $usuario, $nivel, $nova_senha = null) {
     global $pdo;
+    if ($nivel === 'docente') {
+        $nivel = 'visitante';
+    }
     if (!empty($nova_senha)) {
         $senhaHash = password_hash($nova_senha, PASSWORD_DEFAULT);
         $sql = "UPDATE usuarios SET usuario = ?, nivel = ?, senha = ? WHERE id = ?";
@@ -202,6 +205,9 @@ function atualizarUsuario($id, $usuario, $nivel, $nova_senha = null) {
 
 function salvarUsuario($usuario, $senha, $nivel) {
     global $pdo;
+    if ($nivel === 'docente') {
+        $nivel = 'visitante';
+    }
     $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
     $sql = "INSERT INTO usuarios (usuario, senha, nivel) VALUES (?, ?, ?)";
     return $pdo->prepare($sql)->execute([$usuario, $senhaHash, $nivel]);

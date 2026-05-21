@@ -131,7 +131,7 @@ $lista_usuarios = listarUsuarios();
                 <div>
                     <label>Nível</label>
                     <select name="novo_nivel">
-                        <option value="docente" <?= (isset($user_edicao['nivel']) && $user_edicao['nivel'] == 'docente') ? 'selected' : '' ?>>Docente</option>
+                        <option value="visitante" <?= (isset($user_edicao['nivel']) && ($user_edicao['nivel'] == 'visitante' || $user_edicao['nivel'] == 'docente')) ? 'selected' : '' ?>>Docente</option>
                         <option value="admin" <?= (isset($user_edicao['nivel']) && $user_edicao['nivel'] == 'admin') ? 'selected' : '' ?>>Administrador</option>
                     </select>
                 </div>
