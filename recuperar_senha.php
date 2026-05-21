@@ -2,17 +2,22 @@
 // recuperar_senha.php
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/funcoes_alunos.php';
+require_once __DIR__ . '/api/services/senha.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$mensagem = $_SESSION['senha_reset_msg'] ?? null;
+$classe = $_SESSION['senha_reset_class'] ?? null;
+unset($_SESSION['senha_reset_msg'], $_SESSION['senha_reset_class']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'];
     $nova_senha_plana = "Capoeira2026"; // Senha temporária padrão
-    $senha_hash = password_hash($nova_senha_plana, PASSWORD_DEFAULT);
 
     try {
-        $stmt = $pdo->prepare("UPDATE alunos SET senha = ? WHERE email = ?");
-        $stmt->execute([$senha_hash, $email]);
-
-        if ($stmt->rowCount() > 0) {
+        if (api_aluno_resetar_senha_por_email($email, $nova_senha_plana)) {
             $mensagem = "Senha do aluno resetada! Nova senha: <strong>$nova_senha_plana</strong>";
             $classe = "success";
         } else {
@@ -47,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="<?= $classe ?>"><?= $mensagem ?></div>
         <?php endif; ?>
         
-        <form method="POST">
+        <form method="POST" action="api/senha.php">
             <label>Digite seu E-mail cadastrado:</label>
             <input type="email" name="email" required placeholder="email@exemplo.com">
             <button type="submit">RESETAR SENHA</button>

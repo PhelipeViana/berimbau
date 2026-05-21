@@ -1,6 +1,38 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 
+function normalizarDataMysql($data) {
+    $data = trim((string) $data);
+    if ($data === '') {
+        return null;
+    }
+
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
+        return $data;
+    }
+
+    $dt = DateTime::createFromFormat('d/m/Y', $data);
+    if ($dt instanceof DateTime && $dt->format('d/m/Y') === $data) {
+        return $dt->format('Y-m-d');
+    }
+
+    return $data;
+}
+
+function formatarDataBr($data) {
+    $data = trim((string) $data);
+    if ($data === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $data)) {
+        return $data;
+    }
+
+    $timestamp = strtotime($data);
+    return $timestamp ? date('d/m/Y', $timestamp) : $data;
+}
+
 // ==========================================
 // 1. FUNÇÕES DE ALUNOS
 // ==========================================
@@ -45,7 +77,7 @@ function salvarAluno($dados) {
         ':apelido'     => $dados['apelido'],
         ':email'       => $dados['email'],
         ':senha'       => $senha_hash,
-        ':nascimento'  => $dados['nascimento'],
+        ':nascimento'  => normalizarDataMysql($dados['nascimento'] ?? null),
         ':celular'     => $dados['celular'],
         ':endereco'    => $dados['endereco'],
         ':graduacao'   => $dados['graduacao'],
@@ -61,7 +93,7 @@ function atualizarAluno($dados) {
         $dados['foto'] ?? 'padrao.png',
         $dados['nome'], 
         $dados['apelido'] ?? '', 
-        $dados['nascimento'] ?? null, 
+        normalizarDataMysql($dados['nascimento'] ?? null),
         $dados['celular'] ?? '', 
         $dados['email'] ?? '', 
         $dados['mae'] ?? '', 

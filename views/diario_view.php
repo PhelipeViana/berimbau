@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/funcoes_alunos.php';
+require_once __DIR__ . '/../api/services/aulas.php';
 
 // Apenas Docentes e Admins acessam
 if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] === 'aluno') {
@@ -14,43 +15,23 @@ $alunos = listarAlunos();
 $diario_edicao = null;
 $usuario_id_logado = $_SESSION['usuario_id'];
 $nivel_logado = $_SESSION['nivel'];
+$presentes_ids = [];
 
 // Lógica para carregar dados em caso de edição
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $sql_edit = ($nivel_logado === 'admin') 
-        ? "SELECT * FROM aulas WHERE id = ?" 
-        : "SELECT * FROM aulas WHERE id = ? AND docente_id = ?";
-    
-    $params_edit = ($nivel_logado === 'admin') ? [$_GET['edit']] : [$_GET['edit'], $usuario_id_logado];
-    
-    $stmt = $pdo->prepare($sql_edit);
-    $stmt->execute($params_edit);
-    $diario_edicao = $stmt->fetch(PDO::FETCH_ASSOC);
+    $diario_edicao = api_aula_buscar_edicao($_GET['edit'], $nivel_logado, $usuario_id_logado);
 
     if (!$diario_edicao && isset($_GET['edit'])) {
         header("Location: diario_view.php?msg=permissao_negada");
         exit;
     }
+
+    if ($diario_edicao) {
+        $presentes_ids = array_column(api_aula_presencas($diario_edicao['id']), 'id');
+    }
 }
 
-// Filtro de Privacidade
-if ($nivel_logado === 'admin') {
-    $sql_recentes = "SELECT a.*, u.usuario as docente_nome 
-                     FROM aulas a 
-                     LEFT JOIN usuarios u ON a.docente_id = u.id 
-                     ORDER BY a.data_aula DESC LIMIT 20";
-    $stmt_recentes = $pdo->query($sql_recentes);
-} else {
-    $sql_recentes = "SELECT a.*, u.usuario as docente_nome 
-                     FROM aulas a 
-                     LEFT JOIN usuarios u ON a.docente_id = u.id 
-                     WHERE a.docente_id = ? 
-                     ORDER BY a.data_aula DESC LIMIT 20";
-    $stmt_recentes = $pdo->prepare($sql_recentes);
-    $stmt_recentes->execute([$usuario_id_logado]);
-}
-
-$diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
+$diarios_recentes = api_aulas_recentes($nivel_logado, $usuario_id_logado);
 ?>
 
 <!DOCTYPE html>
@@ -62,29 +43,30 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <link rel="stylesheet" href="../assets/css/estilo_padrao.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
 
     <style>
     /* AQUI SÓ FICA O QUE É EXCLUSIVO DO DIÁRIO */
     .main { flex: 1; overflow-y: auto; padding: 40px; }
-    .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
+    .card-glass { padding: 30px; margin-bottom: 30px; }
     
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th { background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #64748b; }
-    td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border-color); font-size: 12px; }
+    td { padding: 12px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
     
     /* CORREÇÃO DOS CONTORNOS DOS CAMPOS */
     input[type="text"], 
-    input[type="date"], 
+    .input-date-br,
     textarea { 
         width: 100%; 
         padding: 12px; 
         border-radius: 10px; 
-        border: 2px solid #cbd5e1; /* Borda mais nítida (cinza médio) */
-        background-color: #ffffff;
+        border: 2px solid var(--border-color); 
+        background-color: var(--surface-strong);
         box-sizing: border-box; 
         font-family: inherit;
         font-size: 14px;
-        color: #1e293b;
+        color: var(--text-main);
         outline: none;
         transition: all 0.2s ease;
         margin-top: 5px;
@@ -92,17 +74,16 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
 
     /* Efeito ao clicar no campo para digitar */
     input[type="text"]:focus, 
-    input[type="date"]:focus, 
+    .input-date-br:focus,
     textarea:focus { 
-        border-color: var(--primary); /* Usa o azul do sistema ao focar */
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); /* Brilho suave ao redor */
-        background-color: #fff;
+        border-color: var(--primary); /* Usa a cor primária ao focar */
+        box-shadow: 0 0 0 4px rgba(15, 122, 58, 0.12); /* Brilho suave ao redor */
     }
 
     label {
         font-weight: 700;
         font-size: 12px;
-        color: #475569;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -115,10 +96,31 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
     }
     .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-    .actions-container { display: flex; align-items: center; gap: 20px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
+    .actions-container { display: flex; align-items: center; gap: 20px; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); }
+
+    /* Correção para evitar que os botões de texto fiquem espremidos com 42px fixos */
+    .history-section .btn-edit, 
+    .history-section .btn-delete {
+        width: auto !important;
+        padding: 0 15px !important;
+    }
+    
+    .msg-alerta { 
+        background: rgba(15, 122, 58, 0.12); color: var(--primary); padding: 15px; border-radius: 8px; 
+        margin-bottom: 20px; text-align: center; font-weight: bold; border: 1px solid rgba(15, 122, 58, 0.22);
+    }
 </style>
 </head>
 <body>
+<script>
+    (function initTheme() {
+        const savedTheme = localStorage.getItem('berimbau-theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.body.classList.add('theme-dark');
+        }
+    })();
+</script>
 
 <aside class="sidebar">
     <div class="sidebar-header">
@@ -144,15 +146,24 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
 </aside>
 
 <main class="main">
+    <?php if(isset($_GET['msg'])): ?>
+        <?php if($_GET['msg'] == 'sucesso'): ?>
+            <div class="msg-alerta">Diário registrado com sucesso!</div>
+        <?php elseif($_GET['msg'] == 'excluido'): ?>
+            <div class="msg-alerta">Registro excluído com sucesso!</div>
+        <?php elseif($_GET['msg'] == 'permissao_negada'): ?>
+            <div class="msg-alerta" style="background: rgba(195, 56, 45, 0.12); color: var(--danger); border-color: rgba(195, 56, 45, 0.22);">Permissão negada para realizar esta ação.</div>
+        <?php endif; ?>
+    <?php endif; ?>
     <div class="card-glass">
-        <form action="../processar_diario.php" method="POST">
+        <form action="../api/aulas.php" method="POST">
             <input type="hidden" name="id_aula" value="<?= $diario_edicao['id'] ?? '' ?>">
             <h2 style="margin-top:0"><?= $diario_edicao ? 'Editar Registro' : 'Novo Registro de Diário' ?></h2>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                 <div>
                     <label>Data:</label>
-                    <input type="date" name="data_aula" value="<?= $diario_edicao['data_aula'] ?? date('Y-m-d') ?>">
+                    <input type="text" name="data_aula" class="input-date-br" inputmode="numeric" maxlength="10" pattern="\d{2}/\d{2}/\d{4}" placeholder="DD/MM/AAAA" value="<?= formatarDataBr($diario_edicao['data_aula'] ?? date('Y-m-d')) ?>">
                 </div>
                 <div>
                     <label>Local:</label>
@@ -172,7 +183,7 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
                     <tr>
                         <td><strong><?= strtoupper($aluno['nome']) ?></strong></td>
                         <td style="text-align: center;">
-                            <input type="checkbox" name="presentes[]" value="<?= $aluno['id'] ?>" checked>
+                            <input type="checkbox" name="presentes[]" value="<?= $aluno['id'] ?>" <?= (!$diario_edicao || in_array($aluno['id'], $presentes_ids)) ? 'checked' : '' ?>>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -217,7 +228,7 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
                 </thead>
                 <tbody>
                     <?php foreach ($diarios_recentes as $row): ?>
-                    <tr>
+                    <tr id="aula-row-<?= (int) $row['id'] ?>">
                         <td><?= date('d/m/Y', strtotime($row['data_aula'])) ?></td>
                         <td><strong><?= $row['tema_aula'] ?></strong></td>
                         <?php if($nivel_logado === 'admin'): ?>
@@ -228,10 +239,19 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
                             <a href="diario_view.php?edit=<?= $row['id'] ?>" class="btn-edit">
                                 <i class="fas fa-edit"></i> Editar
                             </a>
-                            <a href="../excluir_diario.php?id=<?= $row['id'] ?>" class="btn-delete" 
-                               onclick="return confirm('Tem certeza?')">
-                                <i class="fas fa-trash-alt"></i> Excluir
-                            </a>
+                            <form action="../api/aulas.php"
+                                  method="POST"
+                                  style="display:inline;"
+                                  hx-post="../api/aulas.php"
+                                  hx-target="#aula-row-<?= (int) $row['id'] ?>"
+                                  hx-swap="outerHTML"
+                                  hx-confirm="Excluir este registro de diário?">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                                <button type="submit" class="btn-delete" style="border:0; cursor:pointer;">
+                                    <i class="fas fa-trash-alt"></i> Excluir
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -240,5 +260,6 @@ $diarios_recentes = $stmt_recentes->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 </main>
+<script src="../assets/js/datas.js"></script>
 </body>
 </html>

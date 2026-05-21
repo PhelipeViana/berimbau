@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/funcoes_alunos.php';
+require_once __DIR__ . '/api/services/aulas.php';
 
 // Proteção: Só permite acesso se o nível for 'aluno'
 if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] !== 'aluno') {
@@ -21,47 +22,73 @@ $historico = buscarHistorico($_SESSION['aluno_id']);
     <title>Minha Área | CapoeiraOS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        :root { --primary: #0f7a3a; --gold: #f3b51b; --clay: #c9561a; --bg: #f4f1e8; --text: #18251c; --muted: #667062; --border: rgba(43, 63, 43, 0.14); }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                linear-gradient(135deg, rgba(15, 122, 58, 0.08), transparent 34%),
+                linear-gradient(315deg, rgba(243, 181, 27, 0.13), transparent 38%),
+                var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: clamp(18px, 4vw, 34px);
+            min-height: 100vh;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.26;
+            background-image: linear-gradient(90deg, rgba(24,37,28,0.05) 1px, transparent 1px), linear-gradient(rgba(24,37,28,0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
         .container { max-width: 900px; margin: 0 auto; }
         
         /* Cabeçalho do Aluno */
         .profile-header { 
-            background: white; padding: 30px; border-radius: 24px; 
+            background: rgba(255,255,255,0.9); padding: 30px; border-radius: 8px; 
             display: flex; align-items: center; gap: 25px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;
+            box-shadow: 0 18px 45px rgba(28, 38, 24, 0.09); border: 1px solid var(--border);
+            backdrop-filter: blur(14px);
         }
-        .profile-avatar { width: 100px; height: 100px; border-radius: 20px; object-fit: cover; border: 4px solid #f1f5f9; }
-        .profile-info h1 { margin: 0; font-size: 24px; color: #0f172a; }
+        .profile-avatar { width: 104px; height: 104px; border-radius: 8px; object-fit: cover; border: 3px solid rgba(243,181,27,0.55); }
+        .profile-info h1 { margin: 0; font-size: clamp(26px, 4vw, 36px); color: var(--text); letter-spacing: 0; }
         .badge-graduacao { 
-            display: inline-block; padding: 6px 14px; background: var(--primary); 
-            color: white; border-radius: 50px; font-size: 12px; font-weight: 700; margin-top: 8px;
+            display: inline-block; padding: 6px 14px; background: rgba(15,122,58,0.12); 
+            color: var(--primary); border-radius: 999px; font-size: 12px; font-weight: 900; margin-top: 8px;
         }
 
         /* Dashboard de Cards */
         .grid-aluno { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
-        .card-aluno { background: white; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; }
-        .card-title { font-weight: 700; font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: #475569; }
+        .card-aluno { background: rgba(255,255,255,0.9); padding: 25px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 14px 36px rgba(28, 38, 24, 0.08); backdrop-filter: blur(14px); }
+        .card-title { font-weight: 900; font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: var(--text); }
         
         /* Linha do Tempo / Histórico */
         .timeline { list-style: none; padding: 0; margin: 0; }
-        .timeline-item { padding-left: 20px; border-left: 2px solid #e2e8f0; position: relative; padding-bottom: 20px; }
+        .timeline-item { padding-left: 20px; border-left: 2px solid rgba(15,122,58,0.18); position: relative; padding-bottom: 20px; }
         .timeline-item::before { 
             content: ''; position: absolute; left: -7px; top: 0; 
-            width: 12px; height: 12px; background: var(--primary); border-radius: 50%; 
+            width: 12px; height: 12px; background: var(--gold); border-radius: 50%; 
         }
-        .timeline-date { font-size: 11px; color: #94a3b8; font-weight: 700; }
+        .timeline-date { font-size: 11px; color: var(--muted); font-weight: 900; }
 
         .btn-sair { 
             position: absolute; top: 20px; right: 20px; 
-            text-decoration: none; color: #ef4444; font-weight: 700; font-size: 14px; 
+            text-decoration: none; color: #c3382d; font-weight: 900; font-size: 14px; 
+        }
+        @media (max-width: 640px) {
+            .profile-header { display: block; }
+            .profile-avatar { margin-bottom: 16px; }
+            .btn-sair { position: static; display: inline-flex; margin-bottom: 16px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="logout.php" class="btn-sair"><i class="fas fa-sign-out-alt"></i> SAIR</a>
+    <a href="api/logout.php" class="btn-sair"><i class="fas fa-sign-out-alt"></i> SAIR</a>
 
     <header class="profile-header">
         <img src="uploads/<?= $aluno['foto'] ?? 'padrao.png' ?>" class="profile-avatar">
@@ -117,17 +144,7 @@ $historico = buscarHistorico($_SESSION['aluno_id']);
     </div>
     <div style="max-height: 300px; overflow-y: auto;">
         <?php
-        // Buscando as presenças deste aluno específico
-        $stmtP = $pdo->prepare("
-            SELECT a.tema_aula, a.data_aula, a.local_treino 
-            FROM presencas p
-            JOIN aulas a ON p.aula_id = a.id
-            WHERE p.aluno_id = ?
-            ORDER BY a.data_aula DESC
-            LIMIT 10
-        ");
-        $stmtP->execute([$_SESSION['aluno_id']]);
-        $aulas = $stmtP->fetchAll();
+        $aulas = api_aulas_presencas_aluno($_SESSION['aluno_id'], 10);
 
         if (empty($aulas)): ?>
             <p style="font-size: 13px; color: #94a3b8;">Nenhuma presença registrada ainda.</p>

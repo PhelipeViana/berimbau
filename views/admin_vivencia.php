@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../config/db.php';
 
 // Proteção: Apenas Admins alimentam o acervo
 if ($_SESSION['nivel'] !== 'admin') {
@@ -45,7 +44,7 @@ if ($_SESSION['nivel'] !== 'admin') {
 <main class="main">
     <div class="card-form">
         <h2><i class="fas fa-plus-circle"></i> Alimentar Acervo Vivência</h2>
-        <form action="../processar_vivencia.php" method="POST" enctype="multipart/form-data">
+        <form action="../api/vivencia.php" method="POST" enctype="multipart/form-data">
             
             <div class="form-group">
                 <label>Título do Material</label>

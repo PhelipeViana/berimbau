@@ -1,4 +1,4 @@
 .git
+.env
 db_data
 *.log
-

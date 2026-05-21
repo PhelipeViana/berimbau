@@ -1,7 +1,6 @@
 <?php
 // views/admin_competicao.php
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../config/db.php';
 
 // Segurança: Apenas Administradores podem gerenciar competições
 if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] !== 'admin') {
@@ -39,7 +38,7 @@ if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] !== 'admin') {
             </div>
         </div>
 
-        <form action="../processar_competicao.php" method="POST" enctype="multipart/form-data">
+        <form action="../api/competicoes.php" method="POST" enctype="multipart/form-data">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 
                 <div style="grid-column: span 2;">
@@ -50,7 +49,7 @@ if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] !== 'admin') {
 
                 <div>
                     <label style="display:block; margin-bottom:8px; font-weight:bold; color:#1e293b;">Data do Evento</label>
-                    <input type="date" name="data_evento" required 
+                    <input type="text" name="data_evento" class="input-date-br" inputmode="numeric" maxlength="10" pattern="\d{2}/\d{2}/\d{4}" placeholder="DD/MM/AAAA" required
                            style="width:100%; padding:12px; border: 1px solid #e2e8f0; border-radius:10px;">
                 </div>
 
@@ -94,5 +93,6 @@ if (!isset($_SESSION['usuario']) || $_SESSION['nivel'] !== 'admin') {
     </div>
 </div>
 
+<script src="../assets/js/datas.js"></script>
 </body>
 </html>

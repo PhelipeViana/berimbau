@@ -13,27 +13,6 @@ if (isset($_GET['edit_user']) && is_numeric($_GET['edit_user'])) {
     $user_edicao = buscarUsuarioPorId($_GET['edit_user']);
 }
 
-// Processar formulário (Salvar ou Atualizar)
-if (isset($_POST['btnSalvarUsuario'])) {
-    if (!empty($_POST['user_id'])) {
-        // Modo Edição
-        atualizarUsuario($_POST['user_id'], $_POST['novo_usuario'], $_POST['novo_nivel'], $_POST['nova_senha']);
-        $msg = "atualizado";
-    } else {
-        // Modo Cadastro
-        salvarUsuario($_POST['novo_usuario'], $_POST['nova_senha'], $_POST['novo_nivel']);
-        $msg = "criado";
-    }
-    header("Location: usuarios.php?msg=$msg");
-    exit;
-}
-
-if (isset($_GET['delete_user'])) {
-    excluirUsuario($_GET['delete_user']);
-    header("Location: usuarios.php?msg=removido");
-    exit;
-}
-
 $lista_usuarios = listarUsuarios();
 ?>
 
@@ -42,30 +21,70 @@ $lista_usuarios = listarUsuarios();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Operadores | BERIMBAU - SISTEMA DE GESTÃO PARA ESCOLAS DE CAPOEIRA</title>
+    <title>Gestão de Operadores | BERIMBAU</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <link rel="stylesheet" href="assets/css/estilo_padrao.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
 
     <style>
         /* Estilos específicos apenas para a gestão de usuários */
         .main { flex: 1; overflow-y: auto; padding: 40px; }
-        .card-glass { background: white; border-radius: 24px; padding: 30px; border: 1px solid var(--border); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .card-glass { padding: 30px; margin-bottom: 30px; }
         
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-        input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #f8fafc; margin-top: 8px; font-family: inherit; }
+        label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        input, select { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            background: var(--surface-strong); 
+            margin-top: 8px; 
+            font-family: inherit; 
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
         
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        input:focus, select:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 4px rgba(15, 122, 58, 0.12) !important;
+        }
+        
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
+            color: white; 
+            border: none; 
+            padding: 12px 25px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: all 0.2s; 
+        }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
         
-        .user-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid var(--border); }
+        .user-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid var(--border-color); }
         .badge { font-size: 10px; padding: 4px 10px; border-radius: 20px; font-weight: 700; text-transform: uppercase; margin-left: 10px; }
-        .badge-admin { background: #fef2f2; color: var(--danger); }
-        .badge-docente { background: #f0fdf4; color: var(--success); }
+        .badge-admin { background: rgba(195, 56, 45, 0.11); color: var(--danger); }
+        .badge-docente { background: rgba(15, 122, 58, 0.12); color: var(--primary); }
+        
+        .msg-alerta { 
+            background: rgba(15, 122, 58, 0.12); color: var(--primary); padding: 15px; border-radius: 8px; 
+            margin-bottom: 20px; text-align: center; font-weight: bold; border: 1px solid rgba(15, 122, 58, 0.22);
+        }
     </style>
 </head>
 <body>
+<script>
+    (function initTheme() {
+        const savedTheme = localStorage.getItem('berimbau-theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.body.classList.add('theme-dark');
+        }
+    })();
+</script>
 
 <aside class="sidebar">
     <div class="sidebar-header">
@@ -84,9 +103,21 @@ $lista_usuarios = listarUsuarios();
 </aside>
 
 <main class="main">
+    <?php if(isset($_GET['msg'])): ?>
+        <?php if($_GET['msg'] == 'criado'): ?>
+            <div class="msg-alerta">Operador cadastrado com sucesso!</div>
+        <?php elseif($_GET['msg'] == 'atualizado'): ?>
+            <div class="msg-alerta">Dados do operador atualizados!</div>
+        <?php elseif($_GET['msg'] == 'removido'): ?>
+            <div class="msg-alerta">Operador removido com sucesso!</div>
+        <?php elseif($_GET['msg'] == 'erro'): ?>
+            <div class="msg-alerta" style="background: rgba(195, 56, 45, 0.12); color: var(--danger); border-color: rgba(195, 56, 45, 0.22);">Não foi possível realizar a ação.</div>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <div class="card-glass">
         <h3><?= $user_edicao ? 'Editar Utilizador' : 'Novo Operador' ?></h3>
-        <form method="POST">
+        <form method="POST" action="api/usuarios.php">
             <input type="hidden" name="user_id" value="<?= $user_edicao['id'] ?? '' ?>">
             <div class="form-grid">
                 <div>
@@ -110,24 +141,36 @@ $lista_usuarios = listarUsuarios();
                     <?= $user_edicao ? 'ATUALIZAR DADOS' : 'CADASTRAR' ?>
                 </button>
                 <?php if($user_edicao): ?>
-                    <a href="usuarios.php" style="padding:12px; color:#64748b; text-decoration:none; font-size:14px;">Cancelar</a>
+                    <a href="usuarios.php" style="padding:12px; color:var(--text-muted); text-decoration:none; font-size:14px;">Cancelar</a>
                 <?php endif; ?>
             </div>
         </form>
     </div>
 
     <div class="card-glass" style="padding:0;">
-        <div style="padding:20px; border-bottom: 1px solid var(--border);"><strong>Utilizadores do Sistema</strong></div>
+        <div style="padding:20px; border-bottom: 1px solid var(--border-color);"><strong>Utilizadores do Sistema</strong></div>
         <?php foreach($lista_usuarios as $u): ?>
-            <div class="user-row">
+            <div class="user-row" id="user-row-<?= (int) $u['id'] ?>">
                 <div style="flex:1">
                     <strong><?= strtoupper($u['usuario']) ?></strong>
                     <span class="badge <?= $u['nivel'] === 'admin' ? 'badge-admin' : 'badge-docente' ?>"><?= $u['nivel'] ?></span>
                 </div>
-                <div class="actions">
-                    <a href="?edit_user=<?= $u['id'] ?>" style="color: var(--primary); margin-right: 15px;"><i class="fas fa-edit"></i></a>
+                <div class="actions" style="display: flex; gap: 8px; align-items: center;">
+                    <a href="?edit_user=<?= $u['id'] ?>" class="btn-edit"><i class="fas fa-edit"></i></a>
                     <?php if($u['id'] != $_SESSION['usuario_id']): ?>
-                        <a href="?delete_user=<?= $u['id'] ?>" style="color: var(--danger);" onclick="return confirm('Excluir?')"><i class="fas fa-trash"></i></a>
+                        <form action="api/usuarios.php"
+                              method="POST"
+                              style="display:inline;"
+                              hx-post="api/usuarios.php"
+                              hx-target="#user-row-<?= (int) $u['id'] ?>"
+                              hx-swap="outerHTML"
+                              hx-confirm="Excluir este operador?">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                            <button type="submit" class="btn-delete" style="border:0; cursor:pointer;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>

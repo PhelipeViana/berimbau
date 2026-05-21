@@ -17,14 +17,7 @@ if (!isset($_SESSION['usuario'])) {
 $page = $_GET['page'] ?? 'dashboard';
 $aluno_edicao = null;
 
-// 2. LÓGICA PARA EXCLUSÃO DE ALUNO
-if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    excluirAluno($_GET['delete']);
-    header("Location: index.php?page=lista&msg=excluido");
-    exit;
-}
-
-// 3. CARREGAR DADOS PARA EDIÇÃO (Utilizado para validar solicitações do Dashboard)
+// 2. CARREGAR DADOS PARA EDIÇÃO (Utilizado para validar solicitações do Dashboard)
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $aluno_edicao = buscarAlunoPorId($_GET['edit']);
     if ($aluno_edicao) {
@@ -32,42 +25,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     }
 }
 
-// 4. PROCESSAMENTO DE DADOS (POST)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['btnSalvar'])) {
-        // Define quem é o docente responsável (Admin pode escolher, Operador é ele mesmo)
-        $_POST['docente_id'] = ($_SESSION['nivel'] === 'admin') ? ($_POST['docente_id'] ?? $_SESSION['usuario_id']) : $_SESSION['usuario_id'];
-        
-        // Processamento da Foto
-        $nome_foto = $_POST['foto_atual'] ?? 'padrao.png';
-        if (isset($_FILES['foto']) && $_FILES['foto']['error'] === 0) {
-            $extensao = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
-            $novo_nome = uniqid() . "." . $extensao;
-            if (move_uploaded_file($_FILES['foto']['tmp_name'], __DIR__ . "/uploads/" . $novo_nome)) {
-                $nome_foto = $novo_nome;
-            }
-        }
-        $_POST['foto'] = $nome_foto;
-
-        // Processamento de Senha (Segurança: mantém a atual se não houver nova)
-        if (!empty($_POST['nova_senha'])) {
-            $_POST['senha'] = password_hash($_POST['nova_senha'], PASSWORD_DEFAULT);
-        }
-
-        // Se o status foi alterado para 'ativo' no form, a função salvarAluno/atualizarAluno fará o commit
-        if (!empty($_POST['id'])) {
-            atualizarAluno($_POST);
-        } else {
-            salvarAluno($_POST);
-        }
-
-        // Redireciona para a lista. Se era uma solicitação, ela já não aparecerá mais como pendente.
-        header("Location: index.php?page=lista&msg=sucesso");
-        exit;
-    }
-}
-
-// 5. CARREGAMENTO DE DADOS PARA A VIEW
+// 3. CARREGAMENTO DE DADOS PARA A VIEW
 $alunos = listarAlunos();
 $stats = obterEstatisticas(); 
 
@@ -85,22 +43,23 @@ $solicitacoes = array_filter($alunos, function($a) {
     <title>BERIMBAU | Gestão de Capoeira</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/estilo_padrao.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
     <style>
         .card-vivencia {
-            background: white; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; 
+            background: var(--surface); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); 
             transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: space-between;
         }
-        .card-vivencia:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); border-color: var(--primary); }
+        .card-vivencia:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); border-color: rgba(15, 122, 58, 0.34); }
         .icon-vivencia {
-            background: #f1f5f9; width: 50px; height: 50px; border-radius: 12px; 
+            background: rgba(15, 122, 58, 0.1); width: 50px; height: 50px; border-radius: 8px; 
             display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
         }
         .badge-pendente {
             background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 5px;
         }
         .msg-alerta { 
-            background: #dcfce7; color: #166534; padding: 15px; border-radius: 12px; 
-            margin-bottom: 20px; text-align: center; font-weight: bold; border: 1px solid #bbf7d0;
+            background: rgba(15, 122, 58, 0.12); color: var(--primary); padding: 15px; border-radius: 8px; 
+            margin-bottom: 20px; text-align: center; font-weight: bold; border: 1px solid rgba(15, 122, 58, 0.22);
         }
     </style>
 </head>
@@ -146,11 +105,14 @@ $solicitacoes = array_filter($alunos, function($a) {
     </nav>
 
     <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="Alternar tema">
+            <i class="fas fa-circle-half-stroke"></i> <span class="theme-label">TEMA</span>
+        </button>
         <div class="user-info" style="margin-bottom: 15px;">
             <small style="display: block; color: #94a3b8; font-size: 10px; letter-spacing: 1px;">USUÁRIO CONECTADO</small>
             <strong style="color: white; font-size: 13px;"><?= strtoupper($_SESSION['usuario']) ?></strong>
         </div>
-        <a href="logout.php" class="btn-logout" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 12px; transition: all 0.3s ease; border: 1px solid rgba(239, 68, 68, 0.2);">
+        <a href="api/logout.php" class="btn-logout" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 12px; transition: all 0.3s ease; border: 1px solid rgba(239, 68, 68, 0.2);">
             <i class="fas fa-sign-out-alt"></i> <span>SAIR DO SISTEMA</span>
         </a>
     </div>
@@ -168,8 +130,8 @@ $solicitacoes = array_filter($alunos, function($a) {
 
     <?php if ($page == 'dashboard'): ?>
         <header class="content-header">
-            <h1>Olá, <?= explode(' ', $_SESSION['usuario'])[0] ?>! 👋</h1>
-            <p>Bem-vindo ao sistema da sua escola.</p>
+            <h1>Olá, <?= explode(' ', $_SESSION['usuario'])[0] ?>!</h1>
+            <p>Organize alunos, aulas e vivências com a energia da roda.</p>
         </header>
 
         <?php if ($_SESSION['nivel'] === 'admin' && count($solicitacoes) > 0): ?>
@@ -194,32 +156,14 @@ $solicitacoes = array_filter($alunos, function($a) {
             </div>
         <?php endif; ?>
 
-        <div class="stats-grid">
-            <?php if ($_SESSION['nivel'] === 'aluno'): 
-                $frequencia = obterFrequenciaAluno($_SESSION['usuario_id']); 
-            ?>
-                <div class="card-estatistica">
-                    <div class="icon-box bg-success"><i class="fas fa-check-circle"></i></div>
-                    <div><h2><?= $frequencia['presencas'] ?></h2><small>PRESENÇAS</small></div>
-                </div>
-                <div class="card-estatistica">
-                    <div class="icon-box bg-info"><i class="fas fa-percentage"></i></div>
-                    <div><h2><?= $frequencia['aproveitamento'] ?>%</h2><small>FREQUÊNCIA</small></div>
-                </div>
-            <?php else: ?>
-                <div class="card-estatistica">
-                    <div class="icon-box bg-info"><i class="fas fa-user-graduate"></i></div>
-                    <div><h2><?= $stats['total'] ?></h2><small>ALUNOS ATIVOS</small></div>
-                </div>
-                <div class="card-estatistica">
-                    <div class="icon-box bg-danger"><i class="fas fa-heartbeat"></i></div>
-                    <div><h2><?= $stats['alertas_saude'] ?></h2><small>ALERTAS SAÚDE</small></div>
-                </div>
-                <div class="card-estatistica">
-                    <div class="icon-box bg-warning"><i class="fas fa-calendar-check"></i></div>
-                    <div><h2><?= $stats['aulas_mes'] ?? 0 ?></h2><small>AULAS NO MÊS</small></div>
-                </div>
-            <?php endif; ?>
+        <div class="stats-grid"
+             hx-get="api/dashboard.php?partial=stats"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="card-estatistica">
+                <div class="icon-box bg-info"><i class="fas fa-spinner fa-spin"></i></div>
+                <div><h2>...</h2><small>CARREGANDO</small></div>
+            </div>
         </div>
 
     <?php elseif ($page == 'lista'): ?>
@@ -233,39 +177,20 @@ $solicitacoes = array_filter($alunos, function($a) {
             </a>
         </header>
 
-        <div class="list-container">
-            <?php 
-            $exibir_alunos = (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? $solicitacoes : $alunos;
-            if (count($exibir_alunos) > 0):
-                foreach ($exibir_alunos as $a): ?>
-                    <div class="aluno-card" style="<?= (empty($a['docente_id']) || $a['status'] == 'pendente') ? 'border-left: 4px solid #ef4444;' : '' ?>">
-                        <img src="uploads/<?= $a['foto'] ?? 'padrao.png' ?>" class="avatar-circle">
-                        <div class="aluno-info">
-                            <strong><?= strtoupper($a['nome']) ?></strong>
-                            <span class="grad-tag"><?= $a['graduacao'] ?></span>
-                        </div>
-                        <div class="aluno-actions">
-                            <a href="?edit=<?= $a['id'] ?>" class="btn-edit" title="Editar / Validar"><i class="fas fa-edit"></i></a>
-                            <a href="?delete=<?= $a['id'] ?>" class="btn-delete" onclick="return confirm('Deseja excluir este registro?')"><i class="fas fa-trash"></i></a>
-                        </div>
-                    </div>
-                <?php endforeach; 
-            else: ?>
-                <p style="text-align: center; color: #94a3b8; padding: 40px;">Nenhum aluno encontrado nesta categoria.</p>
-            <?php endif; ?>
+        <div class="list-container"
+             hx-get="api/alunos.php?partial=list<?= (isset($_GET['filter']) && $_GET['filter'] == 'pendentes') ? '&filter=pendentes' : '' ?>"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p style="text-align: center; color: #94a3b8; padding: 40px;">Carregando alunos...</p>
         </div>
 
     <?php elseif ($page == 'cadastro'): ?>
         <?php include 'cadastro_aluno.php'; ?>
 
     <?php elseif ($page == 'vivencia'): ?>
-        <?php 
-            $sql_vivencia = "SELECT * FROM vivencia ORDER BY categoria, titulo";
-            $conteudos = $pdo->query($sql_vivencia)->fetchAll();
-        ?>
         <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <div>
-                <h1>Vivência e Saber 👋</h1>
+                <h1>Vivência e Saber</h1>
                 <p style="color: #64748b;">Acervo de apoio para a formação do Capoeira.</p>
             </div>
             <?php if ($_SESSION['nivel'] === 'admin'): ?>
@@ -275,35 +200,18 @@ $solicitacoes = array_filter($alunos, function($a) {
             <?php endif; ?>
         </header>
 
-        <div class="vivencia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-            <?php foreach ($conteudos as $item): ?>
-                <div class="card-vivencia">
-                    <div>
-                        <div class="icon-vivencia">
-                            <?php 
-                                if($item['categoria'] == 'historia') echo '<i class="fas fa-history" style="font-size: 24px; color: var(--primary);"></i>';
-                                elseif($item['categoria'] == 'musica') echo '<i class="fas fa-music" style="font-size: 24px; color: #10b981;"></i>';
-                                else echo '<i class="fas fa-scroll" style="font-size: 24px; color: #f59e0b;"></i>';
-                            ?>
-                        </div>
-                        <h3><?= htmlspecialchars($item['titulo']) ?></h3>
-                        <p style="color: #64748b; font-size: 14px;"><?= htmlspecialchars($item['descricao']) ?></p>
-                    </div>
-                    <a href="<?= $item['url_conteudo'] ?>" target="_blank" class="btn-berimbau btn-primary" style="display: block; text-align: center; text-decoration: none; margin-top: 20px;">
-                        ACESSAR CONTEÚDO
-                    </a>
-                </div>
-            <?php endforeach; ?>
+        <div class="vivencia-grid"
+             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;"
+             hx-get="api/vivencia.php?partial=cards"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">Carregando acervo...</p>
         </div>
 
     <?php elseif ($page == 'competicao'): ?>
-        <?php 
-            $sql_comp = "SELECT * FROM competicoes ORDER BY data_evento DESC";
-            $eventos = $pdo->query($sql_comp)->fetchAll();
-        ?>
         <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <div>
-                <h1>Competições e Eventos 🏆</h1>
+                <h1>Competições e Eventos</h1>
                 <p style="color: #64748b;">Acompanhe campeonatos e torneios internos.</p>
             </div>
             <?php if ($_SESSION['nivel'] === 'admin'): ?>
@@ -313,50 +221,12 @@ $solicitacoes = array_filter($alunos, function($a) {
             <?php endif; ?>
         </header>
 
-        <div class="competicao-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
-            <?php if (count($eventos) > 0): ?>
-                <?php foreach ($eventos as $ev): ?>
-                    <div class="card-vivencia" style="border-left: 5px solid <?= $ev['status'] == 'inscricoes_abertas' ? '#10b981' : '#64748b' ?>;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span class="status-tag" style="font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 20px; background: #f1f5f9;">
-                                <?= strtoupper(str_replace('_', ' ', $ev['status'])) ?>
-                            </span>
-                            <span style="font-size: 12px; color: #94a3b8;"><i class="far fa-calendar-alt"></i> <?= date('d/m/Y', strtotime($ev['data_evento'])) ?></span>
-                        </div>
-                        <h3 style="margin: 15px 0;"><?= htmlspecialchars($ev['nome_evento']) ?></h3>
-                        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;"><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($ev['local_evento']) ?></p>
-
-                        <?php if ($_SESSION['nivel'] === 'admin'): ?>
-                            <?php
-                                $stmt_cont = $pdo->prepare("SELECT COUNT(*) FROM inscricoes_competicao WHERE competicao_id = ?");
-                                $stmt_cont->execute([$ev['id']]);
-                                $total_inscritos = $stmt_cont->fetchColumn();
-                            ?>
-                            <div style="margin-bottom: 15px; padding: 8px; background: #f0f9ff; border-radius: 8px; font-size: 12px; color: #0369a1; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-users"></i> <strong><?= $total_inscritos ?></strong> Alunos confirmados
-                            </div>
-                        <?php endif; ?>
-
-                        <div style="display: flex; gap: 10px;">
-                            <a href="<?= $ev['edital_url'] ?: '#' ?>" target="_blank" class="btn-berimbau" style="flex: 1; text-align: center; text-decoration: none; padding: 10px; border-radius: 8px; background: #f1f5f9; font-weight: bold; font-size: 12px;">REGRAS</a>
-                            
-                            <?php if ($ev['status'] == 'inscricoes_abertas'): ?>
-                                <a href="inscrever_aluno.php?id=<?= $ev['id'] ?>" 
-                                   class="btn-berimbau btn-primary" 
-                                   style="flex: 1; text-align: center; text-decoration: none; padding: 10px; border-radius: 8px; font-size: 12px;"
-                                   onclick="return confirm('Confirmar inscrição?')">
-                                   INSCREVER-SE
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div style="grid-column: 1 / -1; text-align: center; padding: 60px; background: white; border-radius: 24px; border: 2px dashed #e2e8f0;">
-                    <i class="fas fa-medal" style="font-size: 50px; color: #cbd5e1; margin-bottom: 15px;"></i>
-                    <p style="color: #94a3b8;">Nenhuma competição agendada.</p>
-                </div>
-            <?php endif; ?>
+        <div class="competicao-grid"
+             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;"
+             hx-get="api/competicoes.php?partial=cards"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">Carregando competições...</p>
         </div>
     <?php endif; ?>
 </main>
@@ -364,6 +234,19 @@ $solicitacoes = array_filter($alunos, function($a) {
 <script>
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+(function initTheme() {
+    const savedTheme = localStorage.getItem('berimbau-theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.body.classList.add('theme-dark');
+    }
+})();
+
+function toggleTheme() {
+    document.body.classList.toggle('theme-dark');
+    localStorage.setItem('berimbau-theme', document.body.classList.contains('theme-dark') ? 'dark' : 'light');
 }
 </script>
 </body>

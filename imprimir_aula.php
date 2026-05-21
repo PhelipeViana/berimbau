@@ -1,21 +1,13 @@
 <?php
 require_once 'includes/auth.php';
 require_once 'includes/funcoes_alunos.php';
+require_once __DIR__ . '/api/services/aulas.php';
 
 $aula_id = $_GET['id'] ?? null;
 if (!$aula_id) die("Aula não encontrada.");
 
-// Precisamos buscar os dados da aula e os alunos presentes
-// (Vou assumir que você criará uma função buscarAulaPorId no funcoes_alunos)
-global $pdo;
-$stmt = $pdo->prepare("SELECT a.*, u.usuario as docente_nome FROM aulas a JOIN usuarios u ON a.docente_id = u.id WHERE a.id = ?");
-$stmt->execute([$aula_id]);
-$aula = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Buscar presentes
-$stmtP = $pdo->prepare("SELECT al.nome, al.apelido, al.graduacao FROM presencas p JOIN alunos al ON p.aluno_id = al.id WHERE p.aula_id = ? ORDER BY al.nome ASC");
-$stmtP->execute([$aula_id]);
-$presentes = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+$aula = api_aula_buscar_com_docente($aula_id);
+$presentes = api_aula_presencas($aula_id, true);
 ?>
 
 <!DOCTYPE html>

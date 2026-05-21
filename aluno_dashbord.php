@@ -3,6 +3,7 @@
 require_once __DIR__ . '/includes/auth.php'; // Garante que o aluno está logado
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/funcoes_alunos.php';
+require_once __DIR__ . '/api/services/vivencia.php';
 
 // Segurança: Garante que apenas alunos acessem
 $aluno_id = $_SESSION['aluno_id'] ?? null; 
@@ -14,12 +15,14 @@ if (!$aluno_id) {
 // 1. Busca os dados do aluno logado (Tabela alunos)
 $dados_aluno = buscarAlunoPorId($aluno_id);
 
-// 2. Busca os conteúdos educativos (Tabela vivencia)
-$stmt_vivencia = $pdo->query("SELECT * FROM vivencia ORDER BY data_postagem DESC");
-$materiais = $stmt_vivencia->fetchAll(PDO::FETCH_ASSOC);
+// 2. Busca os conteúdos educativos pela camada de API/serviços
+$materiais = api_vivencia_listar();
 
 // 3. Busca estatísticas de presença
 $estatisticas = obterFrequenciaAluno($aluno_id);
+$mensagem = $_GET['msg'] ?? null;
+$erroFoto = $_SESSION['foto_upload_erro'] ?? null;
+unset($_SESSION['foto_upload_erro']);
 ?>
 
 <!DOCTYPE html>
@@ -27,28 +30,70 @@ $estatisticas = obterFrequenciaAluno($aluno_id);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Área do Aluno - Sistema Capoeira</title>
-    <link rel="stylesheet" href="assets/css/estilo_aluno.css">
+    <title>Área do Aluno - BERIMBAU</title>
+    <link rel="stylesheet" href="assets/css/estilo_alunos.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Bem-vindo, <?php echo htmlspecialchars($dados_aluno['apelido'] ?: $dados_aluno['nome']); ?>!</h1>
+        <header class="topbar-aluno">
+            <div>
+                <span class="eyebrow">Área do aluno</span>
+                <h1>Salve, <?php echo htmlspecialchars($dados_aluno['apelido'] ?: explode(' ', $dados_aluno['nome'])[0]); ?>!</h1>
+                <p>Acompanhe sua frequência, graduação e materiais de vivência.</p>
+            </div>
+            <a href="api/logout.php" class="btn-sair">Sair</a>
         </header>
+
+        <?php if ($mensagem === 'foto_atualizada'): ?>
+            <div class="upload-feedback success">Foto atualizada com sucesso.</div>
+        <?php elseif ($erroFoto): ?>
+            <div class="upload-feedback error"><?= htmlspecialchars($erroFoto) ?></div>
+        <?php endif; ?>
         
         <div class="card-perfil">
-            <img src="uploads/<?php echo $dados_aluno['foto']; ?>" alt="Foto de <?php echo $dados_aluno['apelido']; ?>">
+            <div class="perfil-foto-wrap" id="foto-preview">
+                <img src="uploads/<?php echo htmlspecialchars($dados_aluno['foto'] ?: 'padrao.png'); ?>" class="perfil-foto" alt="Foto de <?php echo htmlspecialchars($dados_aluno['apelido'] ?: $dados_aluno['nome']); ?>">
+            </div>
             <div class="info-aluno">
-                <p><strong>Apelido:</strong> <?php echo htmlspecialchars($dados_aluno['apelido']); ?></p>
-                <p><strong>Graduação:</strong> <?php echo htmlspecialchars($dados_aluno['graduacao']); ?></p>
-                <p><strong>Frequência:</strong> <?php echo $estatisticas['aproveitamento']; ?>%</p>
-                <p><strong>Status:</strong> <span style="color: green; font-weight: bold;"><?php echo strtoupper($dados_aluno['status']); ?></span></p>
+                <div class="info-heading">
+                    <h2><?php echo htmlspecialchars($dados_aluno['nome']); ?></h2>
+                    <span class="status-pill"><?php echo strtoupper(htmlspecialchars($dados_aluno['status'])); ?></span>
+                </div>
+                <div class="metrics-grid">
+                    <div>
+                        <span>Graduação</span>
+                        <strong><?php echo htmlspecialchars($dados_aluno['graduacao']); ?></strong>
+                    </div>
+                    <div>
+                        <span>Frequência</span>
+                        <strong><?php echo (int) $estatisticas['aproveitamento']; ?>%</strong>
+                    </div>
+                    <div>
+                        <span>Presenças</span>
+                        <strong><?php echo (int) $estatisticas['presencas']; ?></strong>
+                    </div>
+                </div>
+                <form class="foto-form" action="api/foto.php" method="POST" enctype="multipart/form-data">
+                    <label for="foto">Atualizar foto do perfil</label>
+                    <div class="foto-upload-row">
+                        <input type="file" id="foto" name="foto" accept="image/png,image/jpeg,image/webp" required>
+                        <button type="submit">Enviar foto</button>
+                    </div>
+                    <small>JPG, PNG ou WEBP até 2MB.</small>
+                </form>
             </div>
         </div>
 
         <section class="secao-vivencia">
-            <h2>Biblioteca de Vivência</h2>
+            <div class="section-title-row">
+                <div>
+                    <span class="eyebrow">Vivência</span>
+                    <h2>Biblioteca de estudo</h2>
+                </div>
+            </div>
             <div class="lista-materiais">
+                <?php if (count($materiais) > 0): ?>
                 <?php foreach ($materiais as $item): ?>
                     <div class="material-item">
                         <span class="badge"><?php echo strtoupper($item['categoria']); ?></span>
@@ -70,6 +115,9 @@ $estatisticas = obterFrequenciaAluno($aluno_id);
                         </div>
                     </div>
                 <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="empty-state">Nenhum material publicado ainda.</div>
+                <?php endif; ?>
             </div>
         </section>
     </div>

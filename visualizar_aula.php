@@ -2,6 +2,7 @@
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/funcoes_alunos.php';
+require_once __DIR__ . '/api/services/aulas.php';
 
 $aula_id = $_GET['id'] ?? null;
 
@@ -9,15 +10,8 @@ if (!$aula_id) {
     die("Aula não encontrada.");
 }
 
-// Busca dados da aula
-$stmt = $pdo->prepare("SELECT a.*, u.usuario as nome_docente FROM aulas a JOIN usuarios u ON a.docente_id = u.id WHERE a.id = ?");
-$stmt->execute([$aula_id]);
-$aula = $stmt->fetch();
-
-// Busca presença
-$stmtP = $pdo->prepare("SELECT al.nome, al.apelido FROM presencas p JOIN alunos al ON p.aluno_id = al.id WHERE p.aula_id = ?");
-$stmtP->execute([$aula_id]);
-$presencas = $stmtP->fetchAll();
+$aula = api_aula_buscar_com_docente($aula_id);
+$presencas = api_aula_presencas($aula_id);
 ?>
 
 <!DOCTYPE html>

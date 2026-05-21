@@ -13,29 +13,75 @@ $is_admin = isset($_SESSION['usuario_id']);
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
     :root {
-        --primary: #1e293b;
-        --secondary: #6366f1;
-        --border: #e2e8f0;
-        --danger: #ef4444;
-        --bg-input: #f8fafc;
+        --primary: #0f7a3a;
+        --secondary: #f3b51b;
+        --border: rgba(43, 63, 43, 0.14);
+        --danger: #c3382d;
+        --bg-input: rgba(255,255,255,0.74);
     }
 
     .matricula-container {
-        background: white;
+        background: var(--surface, rgba(255,255,255,0.9));
         padding: 30px;
-        border-radius: 24px;
+        border-radius: 8px;
         border: 1px solid var(--border);
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+        box-shadow: 0 18px 45px rgba(28, 38, 24, 0.09);
         max-width: 1000px;
         margin: 20px auto;
         font-family: 'Inter', sans-serif;
+        backdrop-filter: blur(14px);
     }
 
     .form-header {
-        text-align: center;
         margin-bottom: 30px;
-        border-bottom: 2px solid var(--secondary);
+        border-bottom: 1px solid var(--border);
         padding-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .form-actions-top {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .btn-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 9px 13px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 900;
+        font-size: 12px;
+        border: 1px solid var(--border);
+        color: var(--primary);
+        background: rgba(15, 122, 58, 0.08);
+    }
+
+    @media (max-width: 720px) {
+        .form-header,
+        .btn-area-matricula {
+            display: block;
+        }
+
+        .form-actions-top {
+            justify-content: stretch;
+            margin-top: 14px;
+        }
+
+        .btn-mini,
+        .btn-area-matricula .btn-primary,
+        .btn-area-matricula .btn-cancelar {
+            width: 100%;
+            margin-top: 10px;
+        }
     }
 
     .section-title {
@@ -43,7 +89,7 @@ $is_admin = isset($_SESSION['usuario_id']);
         border-left: 4px solid var(--secondary);
         padding: 8px 12px;
         margin: 25px 0 15px 0;
-        background: #f1f5f9;
+        background: rgba(15, 122, 58, 0.08);
         font-size: 14px;
         font-weight: 700;
         text-transform: uppercase;
@@ -71,7 +117,7 @@ $is_admin = isset($_SESSION['usuario_id']);
         width: 100%;
         padding: 12px;
         border: 1px solid var(--border);
-        border-radius: 10px;
+        border-radius: 8px;
         background: var(--bg-input);
         font-size: 14px;
         box-sizing: border-box;
@@ -92,7 +138,7 @@ $is_admin = isset($_SESSION['usuario_id']);
         color: white;
         border: none;
         padding: 15px;
-        border-radius: 12px;
+        border-radius: 8px;
         font-weight: 700;
         cursor: pointer;
         transition: background 0.3s;
@@ -102,10 +148,10 @@ $is_admin = isset($_SESSION['usuario_id']);
         flex: 1;
         text-align: center;
         padding: 15px;
-        background: #f1f5f9;
+        background: rgba(23, 32, 25, 0.07);
         color: #64748b;
         text-decoration: none;
-        border-radius: 12px;
+        border-radius: 8px;
         font-size: 14px;
         font-weight: 700;
     }
@@ -113,11 +159,21 @@ $is_admin = isset($_SESSION['usuario_id']);
 
 <div class="matricula-container">
     <div class="form-header">
-        <h2 style="margin:0; letter-spacing:-1px;">FICHA DE MATRÍCULA OFICIAL - 2026</h2>
-        <small style="color:#64748b">BERIMBAU - SISTEMA DE GESTÃO PARA ESCOLAS DE CAPOEIRA</small>
+        <div>
+            <h2 style="margin:0; letter-spacing:-1px;"><?= $aluno_edicao ? 'EDITAR ALUNO' : 'NOVO ALUNO' ?></h2>
+            <small style="color:#64748b">BERIMBAU - SISTEMA DE GESTÃO PARA ESCOLAS DE CAPOEIRA</small>
+        </div>
+        <?php if ($is_admin): ?>
+            <div class="form-actions-top">
+                <?php if ($aluno_edicao): ?>
+                    <a href="index.php?page=cadastro" class="btn-mini"><i class="fas fa-plus"></i>&nbsp; Novo aluno</a>
+                <?php endif; ?>
+                <a href="index.php?page=lista" class="btn-mini"><i class="fas fa-list"></i>&nbsp; Ver lista</a>
+            </div>
+        <?php endif; ?>
     </div>
 
-    <form method="POST" action="<?= $is_admin ? 'processar_cadastro.php' : 'processa_externo.php' ?>" enctype="multipart/form-data">
+    <form method="POST" action="<?= $is_admin ? 'api/alunos.php' : 'api/alunos.php?externo=1' ?>" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= $aluno_edicao['id'] ?? '' ?>">
 
         <div class="section-title">1. Identificação e Acesso</div>
@@ -148,7 +204,7 @@ $is_admin = isset($_SESSION['usuario_id']);
             </div>
             <div>
                 <label class="label-matricula required-mark">Data de Nascimento</label>
-                <input type="date" name="nascimento" class="input-matricula" required value="<?= $aluno_edicao['nascimento'] ?? '' ?>">
+                <input type="text" name="nascimento" class="input-matricula input-date-br" inputmode="numeric" maxlength="10" pattern="\d{2}/\d{2}/\d{4}" placeholder="DD/MM/AAAA" required value="<?= formatarDataBr($aluno_edicao['nascimento'] ?? '') ?>">
             </div>
             <div class="form-group-full">
                 <label class="label-matricula required-mark">Endereço Completo</label>
@@ -187,9 +243,11 @@ $is_admin = isset($_SESSION['usuario_id']);
 
         <div class="btn-area-matricula">
             <button type="submit" class="btn-primary" style="flex:2;">
-                <?= $aluno_edicao ? 'ATUALIZAR CADASTRO' : 'ENVIAR SOLICITAÇÃO / SALVAR' ?>
+                <i class="fas fa-save"></i>
+                <?= $aluno_edicao ? 'ATUALIZAR CADASTRO' : ($is_admin ? 'CRIAR ALUNO' : 'ENVIAR SOLICITAÇÃO') ?>
             </button>
             <a href="<?= $is_admin ? 'index.php?page=lista' : 'login_view.php' ?>" class="btn-cancelar">CANCELAR</a>
         </div>
     </form>
 </div>
+<script src="assets/js/datas.js"></script>

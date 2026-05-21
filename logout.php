@@ -1,4 +1,3 @@
 <?php
-require_once 'includes/auth.php';
-fazerLogout();
-?>
+header('Location: api/logout.php');
+exit;
