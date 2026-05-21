@@ -9,24 +9,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $senha_hash = password_hash($nova_senha_plana, PASSWORD_DEFAULT);
 
     try {
-        $stmt = $pdo->prepare("UPDATE usuarios SET senha = ? WHERE email = ?");
+        $stmt = $pdo->prepare("UPDATE alunos SET senha = ? WHERE email = ?");
         $stmt->execute([$senha_hash, $email]);
 
         if ($stmt->rowCount() > 0) {
-            $mensagem = "Senha resetada com sucesso! A nova senha temporária é: <strong>$nova_senha_plana</strong>";
+            $mensagem = "Senha do aluno resetada! Nova senha: <strong>$nova_senha_plana</strong>";
             $classe = "success";
         } else {
-            // Se não achou em usuários, tenta na tabela de alunos
-            $stmt = $pdo->prepare("UPDATE alunos SET senha = ? WHERE email = ?");
-            $stmt->execute([$senha_hash, $email]);
-            
-            if ($stmt->rowCount() > 0) {
-                $mensagem = "Senha do aluno resetada! Nova senha: <strong>$nova_senha_plana</strong>";
-                $classe = "success";
-            } else {
-                $mensagem = "E-mail não encontrado no sistema.";
-                $classe = "error";
-            }
+            $mensagem = "E-mail não encontrado no sistema.";
+            $classe = "error";
         }
     } catch (Exception $e) {
         $mensagem = "Erro ao processar: " . $e->getMessage();

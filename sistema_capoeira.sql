@@ -46,17 +46,18 @@ CREATE TABLE `alunos` (
   `local_treino` varchar(150) DEFAULT NULL,
   `saude` text DEFAULT NULL,
   `data_cadastro` timestamp NOT NULL DEFAULT current_timestamp(),
-  `usuario_id` int(11) NOT NULL
+  `docente_id` int(11) DEFAULT NULL,
+  `usuario_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Despejando dados para a tabela `alunos`
 --
 
-INSERT INTO `alunos` (`id`, `foto`, `nome`, `apelido`, `nascimento`, `celular`, `email`, `senha`, `status`, `mae`, `pai`, `endereco`, `cidade`, `graduacao`, `docente`, `local_treino`, `saude`, `data_cadastro`, `usuario_id`) VALUES
-(1, '69d018fba4ea6.jpg', 'DIEGO CÉSAR DE ARRUDA BORGES', 'PINÓQUIO', '1982-01-02', '065992616665', 'suporte.dct@gmail.com', NULL, 'pendente', 'GRÁCIE EMÍLIE ZÁTTAR', '', 'RUA BICUDO, 02 - CPA 4, TERCEIRA ETAPA', '', 'VERDE (GRADUADO)', 'MESTRE BIRO', '', 'HIPERTENSO, CARDÍACO (DOIS STENTES NO CORAÇÃO)', '2026-04-03 12:58:40', 1),
-(6, '69d6b38035ed7.jpg', 'KARLA DO CARMO GARCIA DUARTE MECENA', '', '1981-07-16', '65992645565', 'karlamecena@gmail.com', '$2y$10$COthabEg4taA/rU4c6pPeOv8SW0f0vT01S7cYQuYvX8cBc1Yl8nzm', 'ativo', '', '', '', 'Cuiabá', 'INICIANTE', '', '', 'jgjkhkjhkjhkjhgkjhgkjhgkjhguyu6yri', '2026-04-08 19:58:56', 1),
-(9, '6a04ae501348a.jpg', 'KARLA isdghoifgh´0io gsdógn´dngftm´sdpgj´p', 'NARUTO', '1981-07-16', '065992616665', 'rafaeldinizduarte@gmail.com', NULL, 'pendente', 'KARLA DO CARMO GARCIA DUARTE MECENA', '', 'Da Serra', '', 'VERDE (GRADUADO)', 'INSTRUTOR ESQUILO', '', 'dfhfgtjufyjghkgh hj f ktsjk dtyjk dytj y jus', '2026-05-13 17:00:27', 1);
+INSERT INTO `alunos` (`id`, `foto`, `nome`, `apelido`, `nascimento`, `celular`, `email`, `senha`, `status`, `mae`, `pai`, `endereco`, `cidade`, `graduacao`, `docente`, `local_treino`, `saude`, `data_cadastro`, `docente_id`, `usuario_id`) VALUES
+(1, '69d018fba4ea6.jpg', 'DIEGO CÉSAR DE ARRUDA BORGES', 'PINÓQUIO', '1982-01-02', '065992616665', 'suporte.dct@gmail.com', NULL, 'pendente', 'GRÁCIE EMÍLIE ZÁTTAR', '', 'RUA BICUDO, 02 - CPA 4, TERCEIRA ETAPA', '', 'VERDE (GRADUADO)', 'MESTRE BIRO', '', 'HIPERTENSO, CARDÍACO (DOIS STENTES NO CORAÇÃO)', '2026-04-03 12:58:40', 1, 1),
+(6, '69d6b38035ed7.jpg', 'KARLA DO CARMO GARCIA DUARTE MECENA', '', '1981-07-16', '65992645565', 'karlamecena@gmail.com', '$2y$10$COthabEg4taA/rU4c6pPeOv8SW0f0vT01S7cYQuYvX8cBc1Yl8nzm', 'ativo', '', '', '', 'Cuiabá', 'INICIANTE', '', '', 'jgjkhkjhkjhkjhgkjhgkjhgkjhguyu6yri', '2026-04-08 19:58:56', 1, 1),
+(9, '6a04ae501348a.jpg', 'KARLA isdghoifgh´0io gsdógn´dngftm´sdpgj´p', 'NARUTO', '1981-07-16', '065992616665', 'rafaeldinizduarte@gmail.com', NULL, 'pendente', 'KARLA DO CARMO GARCIA DUARTE MECENA', '', 'Da Serra', '', 'VERDE (GRADUADO)', 'INSTRUTOR ESQUILO', '', 'dfhfgtjufyjghkgh hj f ktsjk dtyjk dytj y jus', '2026-05-13 17:00:27', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -141,6 +142,53 @@ INSERT INTO `presencas` (`id`, `aula_id`, `aluno_id`, `status`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `vivencia`
+--
+
+CREATE TABLE `vivencia` (
+  `id` int(11) NOT NULL,
+  `titulo` varchar(255) NOT NULL,
+  `descricao` text DEFAULT NULL,
+  `categoria` varchar(100) DEFAULT NULL,
+  `tipo` varchar(50) DEFAULT NULL,
+  `url_conteudo` varchar(255) DEFAULT NULL,
+  `usuario_id` int(11) DEFAULT NULL,
+  `data_postagem` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `competicoes`
+--
+
+CREATE TABLE `competicoes` (
+  `id` int(11) NOT NULL,
+  `nome_evento` varchar(255) NOT NULL,
+  `data_evento` date NOT NULL,
+  `local_evento` varchar(255) DEFAULT NULL,
+  `status` enum('inscricoes_abertas','em_andamento','finalizado') DEFAULT 'inscricoes_abertas',
+  `edital_url` varchar(255) DEFAULT NULL,
+  `descricao` text DEFAULT NULL,
+  `data_cadastro` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `inscricoes_competicao`
+--
+
+CREATE TABLE `inscricoes_competicao` (
+  `id` int(11) NOT NULL,
+  `competicao_id` int(11) NOT NULL,
+  `aluno_id` int(11) NOT NULL,
+  `data_inscricao` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `usuarios`
 --
 
@@ -158,12 +206,12 @@ CREATE TABLE `usuarios` (
 INSERT INTO `usuarios` (`id`, `usuario`, `senha`, `nivel`) VALUES
 (1, 'admin', '$2y$10$ywu7MUHgJ1L6xDEwe.kxzuccpmnt6iNT8.Y1/LlSAYlJlYx8vZKmC', 'admin'),
 (2, 'superadmin', '$2y$10$iZxAoZTlfQcLeOcXfmvQWOIzAvf.r1tqXDO54JccIzIjNZWqB4t1a', 'admin'),
-(12, 'CONTRAMESTRE MUTUM', '$2y$10$OlBbrcUnR4w3Fz33ZQ0OveIgwpd92Z1fZU/byV0ik9K52lAWVZ3pi', ''),
+(12, 'CONTRAMESTRE MUTUM', '$2y$10$OlBbrcUnR4w3Fz33ZQ0OveIgwpd92Z1fZU/byV0ik9K52lAWVZ3pi', 'visitante'),
 (14, 'MESTRE KOSKORAO', '$2y$10$n73NiOtpyAmBhfHh/gKlse/ieAzPYRlnK47D0QCoUZWZWwf28j6XS', 'admin'),
 (15, 'MESTRE BIRO', '$2y$10$/T2unjEoR4j2v2idM///VuJZyBn0ep2dK.dFS5VUpzi/420YXWP2m', 'admin'),
-(16, 'CONTRAMESTRE CHIQUINHO', '$2y$10$gmHDW8CfuoDu/9Z9gtUFk.7Q98cuiZog3AgU3ohSpWTDQhbKvv3KS', ''),
-(17, 'CONTRAMESTRE COYOTE', '$2y$10$8TTbYgGwHpXseSQFFHxafe2Vwk51XcxsLke5Ruv7eNU586L9m3.EW', ''),
-(18, 'CONTRAMESTRE AMENDOIN', '$2y$10$Ki4.nSX4PdCs43XLM8sY7eXyCJ5rV.BHkyaVM4q//ikBVpWWdbia2', '');
+(16, 'CONTRAMESTRE CHIQUINHO', '$2y$10$gmHDW8CfuoDu/9Z9gtUFk.7Q98cuiZog3AgU3ohSpWTDQhbKvv3KS', 'visitante'),
+(17, 'CONTRAMESTRE COYOTE', '$2y$10$8TTbYgGwHpXseSQFFHxafe2Vwk51XcxsLke5Ruv7eNU586L9m3.EW', 'visitante'),
+(18, 'CONTRAMESTRE AMENDOIN', '$2y$10$Ki4.nSX4PdCs43XLM8sY7eXyCJ5rV.BHkyaVM4q//ikBVpWWdbia2', 'visitante');
 
 --
 -- Índices para tabelas despejadas
@@ -174,6 +222,7 @@ INSERT INTO `usuarios` (`id`, `usuario`, `senha`, `nivel`) VALUES
 --
 ALTER TABLE `alunos`
   ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_docente_id_aluno` (`docente_id`),
   ADD KEY `fk_docente_aluno` (`usuario_id`);
 
 --
@@ -195,6 +244,27 @@ ALTER TABLE `historico_graduacoes`
 ALTER TABLE `presencas`
   ADD PRIMARY KEY (`id`),
   ADD KEY `aula_id` (`aula_id`);
+
+--
+-- Índices de tabela `vivencia`
+--
+ALTER TABLE `vivencia`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `usuario_id` (`usuario_id`);
+
+--
+-- Índices de tabela `competicoes`
+--
+ALTER TABLE `competicoes`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Índices de tabela `inscricoes_competicao`
+--
+ALTER TABLE `inscricoes_competicao`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `competicao_aluno` (`competicao_id`,`aluno_id`),
+  ADD KEY `aluno_id` (`aluno_id`);
 
 --
 -- Índices de tabela `usuarios`
@@ -232,6 +302,24 @@ ALTER TABLE `presencas`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
+-- AUTO_INCREMENT de tabela `vivencia`
+--
+ALTER TABLE `vivencia`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `competicoes`
+--
+ALTER TABLE `competicoes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `inscricoes_competicao`
+--
+ALTER TABLE `inscricoes_competicao`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `usuarios`
 --
 ALTER TABLE `usuarios`
@@ -245,7 +333,8 @@ ALTER TABLE `usuarios`
 -- Restrições para tabelas `alunos`
 --
 ALTER TABLE `alunos`
-  ADD CONSTRAINT `fk_docente_aluno` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_docente_aluno` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_docente_id_aluno` FOREIGN KEY (`docente_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Restrições para tabelas `historico_graduacoes`
@@ -258,6 +347,19 @@ ALTER TABLE `historico_graduacoes`
 --
 ALTER TABLE `presencas`
   ADD CONSTRAINT `presencas_ibfk_1` FOREIGN KEY (`aula_id`) REFERENCES `aulas` (`id`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `vivencia`
+--
+ALTER TABLE `vivencia`
+  ADD CONSTRAINT `vivencia_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Restrições para tabelas `inscricoes_competicao`
+--
+ALTER TABLE `inscricoes_competicao`
+  ADD CONSTRAINT `inscricoes_competicao_ibfk_1` FOREIGN KEY (`competicao_id`) REFERENCES `competicoes` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `inscricoes_competicao_ibfk_2` FOREIGN KEY (`aluno_id`) REFERENCES `alunos` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

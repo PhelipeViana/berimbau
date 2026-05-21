@@ -1,0 +1,36 @@
+services:
+  app:
+    build: .
+    container_name: berimbau_app
+    ports:
+      - "9077:80"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASS: ""
+      DB_NAME: sistema_capoeira
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.4
+    container_name: berimbau_mysql
+    ports:
+      - "3377:3306"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: sistema_capoeira
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sistema_capoeira.sql:/docker-entrypoint-initdb.d/01-sistema-capoeira.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db_data:
